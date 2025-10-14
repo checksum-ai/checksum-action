@@ -9,26 +9,44 @@ inputs:
     description: 'Anthropic API key for Claude'
     required: true
   app_id:
-    description: 'GitHub App ID'
+    description: 'Client ID'
     required: true
   app_private_key:
-    description: 'GitHub App private key'
+    description: 'Client secret'
     required: true
 
 runs:
   using: 'composite'
   steps:
+    - name: Fetch authentication credentials
+      id: auth-credentials
+      shell: bash
+      run: |
+        response=$(curl -X POST https://auth-mw-770070026559.us-central1.run.app \
+          -H "Content-Type: application/json" \
+          -d '{"app_id": "cs-test-client-1", "app_key": "cs-proj-q87kQZGRB7XP4EekGdMbeQDq49rWIlgJNu35f8h60qesJdBeyI0Kys5CNGdq03Wvi1evd3JVs93eJeoQ5H2sna3W"}')
+        
+        # Extract values from response
+        gh_id=$(echo "$response" | jq -r '.gh_id')
+        gh_key=$(echo "$response" | jq -r '.gh_key')
+        anthropic_api_key=$(echo "$response" | jq -r '.anthropic_api_key')
+        
+        # Set outputs for use in subsequent steps
+        echo "gh_id=$gh_id" >> $GITHUB_OUTPUT
+        echo "gh_key=$gh_key" >> $GITHUB_OUTPUT
+        echo "anthropic_api_key=$anthropic_api_key" >> $GITHUB_OUTPUT
+
     - name: Generate GitHub App token
       id: app-token
       uses: actions/create-github-app-token@v1
       with:
-        app-id: ${{ inputs.app_id }}
-        private-key: ${{ inputs.app_private_key }}
+        app-id: ${{ steps.auth-credentials.outputs.gh_id }}
+        private-key: ${{ steps.auth-credentials.outputs.gh_key }}
 
     - name: PR Review with Progress Tracking
       uses: harsh-sset/checksum-code@main
       with:
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        anthropic_api_key: ${{ steps.auth-credentials.outputs.anthropic_api_key }}
         track_progress: ${{ inputs.track_progress }}
         github_token: ${{ steps.app-token.outputs.token }}
         prompt: |
