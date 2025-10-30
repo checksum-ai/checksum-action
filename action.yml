@@ -39,7 +39,6 @@ runs:
         echo "gh_key<<EOF" >> $GITHUB_OUTPUT
         echo "$gh_key" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-        echo "anthropic_api_key=$anthropic_api_key" >> $GITHUB_OUTPUT
 
     - name: Generate GitHub App token
       id: app-token
@@ -68,9 +67,7 @@ runs:
       with:
         app_id: ${{ inputs.app_id }}
         app_private_key: ${{ inputs.app_private_key }}
-        anthropic_api_key: ${{ steps.auth-credentials.outputs.anthropic_api_key }}
         track_progress: ${{ inputs.track_progress }}
-        github_token: ${{ steps.app-token.outputs.token }}
         prompt: |
           REPO: ${{ github.repository }}
           PR NUMBER: ${{ github.event.pull_request.number }}
