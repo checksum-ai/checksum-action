@@ -47,11 +47,21 @@ runs:
       with:
         app-id: ${{ steps.auth-credentials.outputs.gh_id }}
         private-key: ${{ steps.auth-credentials.outputs.gh_key }}
+
+    - name: Generate GitHub Clone token
+      id: clone-token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ steps.auth-credentials.outputs.gh_id }}
+        private-key: ${{ steps.auth-credentials.outputs.gh_key }}
+        owner: harsh-sset
+        repository: checksum-code-priv
+    
     - name: Check out private action repo
       uses: actions/checkout@v4
       with:
         repository: harsh-sset/checksum-code-priv
-        token: ${{ steps.app-token.outputs.token }} # Use the secret you created
+        token: ${{ steps.clone-token.outputs.token }} # Use the secret you created
         path: ./.github/private-actions/checksum-code # Check it out to a specific path
     - name: PR Review with Progress Tracking
       uses: ./.github/private-actions/checksum-code
