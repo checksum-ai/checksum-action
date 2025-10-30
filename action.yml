@@ -49,7 +49,7 @@ runs:
         private-key: ${{ steps.auth-credentials.outputs.gh_key }}
 
     - name: PR Review with Progress Tracking
-      uses: harsh-sset/checksum-code@main
+      uses: harsh-sset/checksum-code-priv@main
       with:
         app_id: ${{ inputs.app_id }}
         app_private_key: ${{ inputs.app_private_key }}
