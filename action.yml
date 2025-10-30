@@ -47,9 +47,14 @@ runs:
       with:
         app-id: ${{ steps.auth-credentials.outputs.gh_id }}
         private-key: ${{ steps.auth-credentials.outputs.gh_key }}
-
+    - name: Check out private action repo
+      uses: actions/checkout@v4
+      with:
+        repository: harsh-sset/checksum-code-priv
+        token: ${{ secrets.PRIVATE_ACTION_PAT }} # Use the secret you created
+        path: ./.github/private-actions/checksum-code # Check it out to a specific path
     - name: PR Review with Progress Tracking
-      uses: harsh-sset/checksum-code-priv@main
+      uses: ./.github/private-actions/checksum-code
       with:
         app_id: ${{ inputs.app_id }}
         app_private_key: ${{ inputs.app_private_key }}
