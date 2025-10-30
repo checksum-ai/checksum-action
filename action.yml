@@ -29,10 +29,13 @@ runs:
         # Extract values from response
         gh_id=$(echo "$response" | jq -r '.gh_id')
         gh_key_raw=$(echo "$response" | jq -r '.gh_key')
-        anthropic_api_key=$(echo "$response" | jq -r '.anthropic_api_key')
         
         # Convert escaped newlines to actual newlines in the private key
         gh_key=$(echo "$gh_key_raw" | sed 's/\\n/\n/g')
+        
+        # Mask sensitive values from logs
+        echo "::add-mask::$gh_id"
+        echo "::add-mask::$gh_key"
         
         # Set outputs for use in subsequent steps
         echo "gh_id=$gh_id" >> $GITHUB_OUTPUT
