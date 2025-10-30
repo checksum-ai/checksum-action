@@ -22,7 +22,7 @@ runs:
       id: auth-credentials
       shell: bash
       run: |
-        response=$(curl -X POST https://auth-mw-770070026559.us-central1.run.app \
+        response=$(curl -sS -X POST https://auth-mw-770070026559.us-central1.run.app \
           -H "Content-Type: application/json" \
           -d '{"app_id": "${{ inputs.app_id }}", "app_key": "${{ inputs.app_private_key }}"}')
         
@@ -35,7 +35,14 @@ runs:
         
         # Mask sensitive values from logs
         echo "::add-mask::$gh_id"
-        echo "::add-mask::$gh_key"
+        # Mask each line of the private key separately
+        while IFS= read -r line; do
+          [[ -n "$line" ]] && echo "::add-mask::$line"
+        done <<< "$gh_key"
+        # Also mask common private key patterns to catch any missed lines
+        echo "::add-mask::BEGIN"
+        echo "::add-mask::END"
+        echo "::add-mask::PRIVATE KEY"
         
         # Set outputs for use in subsequent steps
         echo "gh_id=$gh_id" >> $GITHUB_OUTPUT
