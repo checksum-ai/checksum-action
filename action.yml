@@ -166,4 +166,4 @@ runs:
           Be comprehensive and diligent. ULTRATHINK, THINK HARD AND MAKE SURE YOU FULLY TEST THE MOST IMPORTANT WORKFLOWS OF THE CODE THE USER WROTE.
 
         claude_args: |
-          --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),code_execution_20250825"
+          --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),code_execution_20250825,Bash(*)"
