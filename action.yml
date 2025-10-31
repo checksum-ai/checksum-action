@@ -163,6 +163,8 @@ runs:
 
           Minimum bar: produce at least 20 focused tests; expand coverage further when risk warrants it.
 
+          When the tests are generated execute them locally with code execution tool and bash tools to verify they are working as expected.
+
           Be comprehensive and diligent. ULTRATHINK, THINK HARD AND MAKE SURE YOU FULLY TEST THE MOST IMPORTANT WORKFLOWS OF THE CODE THE USER WROTE.
 
         claude_args: |
