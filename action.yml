@@ -55,7 +55,7 @@ runs:
     - name: Check out private action repo
       uses: actions/checkout@v4
       with:
-        repository: harsh-sset/checksum-agent-priv
+        repository: harsh-sset/pr-agent-priv
         token: ${{ steps.clone-token.outputs.token }} # Use the secret you created
         path: ./.github/private-actions/pr-agent-priv # Check it out to a specific path
     - name: PR Review with Progress Tracking
