@@ -7,7 +7,7 @@ inputs:
   app_private_key:
     description: 'Client secret'
     required: true
-    
+
 permissions:  # ← Add this section
     contents: read
     pull-requests: write
@@ -57,6 +57,13 @@ runs:
         private-key: ${{ steps.auth-credentials.outputs.gh_key }}
         owner: harsh-sset
         repository: pr-agent-priv
+
+    - name: Generate PR Review Token
+      id: pr-review-token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ steps.auth-credentials.outputs.gh_id }}
+        private-key: ${{ steps.auth-credentials.outputs.gh_key }}
     
     - name: Check out private action repo
       uses: actions/checkout@v4
@@ -69,3 +76,4 @@ runs:
       with:
         cs_client_id: ${{ inputs.app_id }}
         cs_client_secret: ${{ inputs.app_private_key }}
+        gh_token: ${{ steps.pr-review-token.outputs.token }}
