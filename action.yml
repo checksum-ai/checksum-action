@@ -7,6 +7,12 @@ inputs:
   app_private_key:
     description: 'Client secret'
     required: true
+    
+permissions:  # ← Add this section
+    contents: read
+    pull-requests: write
+    issues: write
+    statuses: write
 
 runs:
   using: 'composite'
