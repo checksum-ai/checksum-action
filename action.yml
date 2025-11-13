@@ -63,4 +63,3 @@ runs:
       with:
         cs_client_id: ${{ inputs.app_id }}
         cs_client_secret: ${{ inputs.app_private_key }}
-        pr_number: ${{ github.event.pull_request.number }}
