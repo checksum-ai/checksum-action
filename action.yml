@@ -1,11 +1,8 @@
 name: 'PR Review with Progress Tracking'
 description: 'Perform PR reviews with Checksum and progress tracking'
 inputs:
-  app_id:
-    description: 'Client ID'
-    required: true
-  app_private_key:
-    description: 'Client secret'
+  cs_api_key:
+    description: 'Checksum API KEY'
     required: true
 
 permissions:  # ← Add this section
@@ -21,9 +18,9 @@ runs:
       id: auth-credentials
       shell: bash
       run: |
-        response=$(curl -sS -X POST https://auth-mw-770070026559.us-central1.run.app \
+        response=$(curl -sS -X POST https://aiagents-770070026559.us-central1.run.app/cq-agent/authenticate \
           -H "Content-Type: application/json" \
-          -d '{"app_id": "${{ inputs.app_id }}", "app_key": "${{ inputs.app_private_key }}"}')
+          -d '{"cs_api_key": "${{ inputs.cs_api_key }}"}')
         
         # Extract values from response
         gh_id=$(echo "$response" | jq -r '.gh_id')
@@ -74,6 +71,5 @@ runs:
     - name: PR Review with Progress Tracking
       uses: ./.github/private-actions/pr-agent-priv
       with:
-        cs_client_id: ${{ inputs.app_id }}
-        cs_client_secret: ${{ inputs.app_private_key }}
+        cs_api_key: ${{ inputs.cs_api_key }}
         gh_token: ${{ steps.pr-review-token.outputs.token }}
