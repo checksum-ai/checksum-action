@@ -22,29 +22,26 @@ runs:
           -H "Content-Type: application/json" \
           -d '{"cs_api_key": "${{ inputs.cs_api_key }}"}')
         
-        # Extract values from response
         gh_id=$(echo "$response" | jq -r '.gh_id')
-        gh_key_raw=$(echo "$response" | jq -r '.gh_key')
+        gh_key_escaped=$(echo "$response" | jq -r '.gh_key')
         
-        # Convert escaped newlines to actual newlines in the private key
-        gh_key=$(echo "$gh_key_raw" | sed 's/\\n/\n/g')
-        
-        # Mask sensitive values from logs
+        # Mask the ID
         echo "::add-mask::$gh_id"
-        # Mask each line of the private key separately
-        while IFS= read -r line; do
-          [[ -n "$line" ]] && echo "::add-mask::$line"
-        done <<< "$gh_key"
-        # Also mask common private key patterns to catch any missed lines
-        echo "::add-mask::BEGIN"
-        echo "::add-mask::END"
-        echo "::add-mask::PRIVATE KEY"
         
-        # Set outputs for use in subsequent steps
+        # Write outputs
         echo "gh_id=$gh_id" >> $GITHUB_OUTPUT
-        echo "gh_key<<EOF" >> $GITHUB_OUTPUT
-        echo "$gh_key" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        
+        # Write the private key with proper newline handling
+        {
+          echo "gh_key<<EOF"
+          printf '%b\n' "$gh_key_escaped"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+        
+        # Mask the key after writing (avoid masking before to prevent output issues)
+        printf '%b\n' "$gh_key_escaped" | while IFS= read -r line; do
+          [[ -n "$line" ]] && echo "::add-mask::$line"
+        done
 
     - name: Generate GitHub Clone token
       id: clone-token
