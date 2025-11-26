@@ -1,5 +1,5 @@
 name: 'PR Review with Progress Tracking'
-description: 'Perform PR reviews with Checksum and progress tracking'
+description: 'Perform PR reviews with Checksum and progress tracking using private action'
 inputs:
   cs_api_key:
     description: 'Checksum API KEY'
