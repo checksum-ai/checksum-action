@@ -52,7 +52,7 @@ runs:
       with:
         app-id: ${{ steps.auth-credentials.outputs.gh_id }}
         private-key: ${{ steps.auth-credentials.outputs.gh_key }}
-        owner: harsh-sset
+        owner: checksum-ai
         repository: pr-agent-priv
 
     - name: Generate PR Review Token
@@ -65,7 +65,7 @@ runs:
     - name: Check out private action repo
       uses: actions/checkout@v4
       with:
-        repository: harsh-sset/pr-agent-priv
+        repository: checksum-ai/pr-agent-priv
         token: ${{ steps.clone-token.outputs.token }} # Use the secret you created
         path: ./.github/private-actions/pr-agent-priv # Check it out to a specific path
     - name: PR Review with Progress Tracking
