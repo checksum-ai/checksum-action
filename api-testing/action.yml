@@ -1,0 +1,45 @@
+name: "Checksum AI Test Run"
+description: "Create a Checksum test run, wait for completion, and summarize results."
+
+inputs:
+  checksum-api-key:
+    description: "Checksum AI project API key"
+    required: true
+  suite-ids:
+    description: "Comma separated list of test suite UUIDs. Empty means all suites with code."
+    required: false
+    default: ""
+  base-url:
+    description: "Checksum AI base URL"
+    required: false
+    default: "https://aiagents.checksum.ai"
+  poll-interval-seconds:
+    description: "Polling interval in seconds"
+    required: false
+    default: "10"
+  timeout-seconds:
+    description: "Maximum time to wait for the test run to finish"
+    required: false
+    default: "600"
+
+outputs:
+  test-run-id:
+    description: "ID of the Checksum test run"
+  status:
+    description: "Final status of the test run"
+  passed-count:
+    description: "Number of passed tests"
+  failed-count:
+    description: "Number of failed tests"
+  healed-count:
+    description: "Number of healed tests"
+  bug-count:
+    description: "Number of bug tests"
+  error-count:
+    description: "Number of tests that ended in error"
+  result-url:
+    description: "URL for viewing the test run in Checksum"
+
+runs:
+  using: "node20"
+  main: "index.js"
