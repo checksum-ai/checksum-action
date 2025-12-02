@@ -1,4 +1,4 @@
-name: 'PR Review with Progress Tracking'
+name: 'Checksum PR Testing Agent'
 description: 'Perform PR reviews with Checksum and progress tracking'
 inputs:
   cs_api_key:
@@ -53,7 +53,7 @@ runs:
         app-id: ${{ steps.auth-credentials.outputs.gh_id }}
         private-key: ${{ steps.auth-credentials.outputs.gh_key }}
         owner: checksum-ai
-        repository: pr-agent-priv
+        repositories: pr-agent-priv
 
     - name: Generate PR Review Token
       id: pr-review-token
