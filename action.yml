@@ -1,102 +1,75 @@
-name: 'PR Review with Progress Tracking'
+name: 'Checksum PR Testing Agent'
 description: 'Perform PR reviews with Checksum and progress tracking'
 inputs:
-  track_progress:
-    description: 'Enable progress tracking with checkboxes'
-    required: false
-    default: 'true'
-  anthropic_api_key:
-    description: 'Anthropic API key for Claude'
+  cs_api_key:
+    description: 'Checksum API KEY'
     required: true
-  app_id:
-    description: 'GitHub App ID'
-    required: true
-  app_private_key:
-    description: 'GitHub App private key'
-    required: true
+
+permissions:  # ← Add this section
+    contents: read
+    pull-requests: write
+    issues: write
+    statuses: write
 
 runs:
   using: 'composite'
   steps:
-    - name: Generate GitHub App token
-      id: app-token
+    - name: Fetch authentication credentials
+      id: auth-credentials
+      shell: bash
+      run: |
+        response=$(curl -sS -X POST https://aiagents-770070026559.us-central1.run.app/cq-agent/authenticate \
+          -H "Content-Type: application/json" \
+          -d '{"cs_api_key": "${{ inputs.cs_api_key }}"}')
+        
+        # Extract values from response
+        gh_id=$(echo "$response" | jq -r '.gh_id')
+        gh_key_raw=$(echo "$response" | jq -r '.gh_key')
+        
+        # Convert escaped newlines to actual newlines in the private key
+        gh_key=$(echo "$gh_key_raw" | sed 's/\\n/\n/g')
+        
+        # Mask sensitive values from logs
+        echo "::add-mask::$gh_id"
+        # Mask each line of the private key separately
+        while IFS= read -r line; do
+          [[ -n "$line" ]] && echo "::add-mask::$line"
+        done <<< "$gh_key"
+        # Also mask common private key patterns to catch any missed lines
+        echo "::add-mask::BEGIN"
+        echo "::add-mask::END"
+        echo "::add-mask::PRIVATE KEY"
+        
+        # Set outputs for use in subsequent steps
+        echo "gh_id=$gh_id" >> $GITHUB_OUTPUT
+        echo "gh_key<<EOF" >> $GITHUB_OUTPUT
+        echo "$gh_key" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Generate GitHub Clone token
+      id: clone-token
       uses: actions/create-github-app-token@v1
       with:
-        app-id: ${{ inputs.app_id }}
-        private-key: ${{ inputs.app_private_key }}
+        app-id: ${{ steps.auth-credentials.outputs.gh_id }}
+        private-key: ${{ steps.auth-credentials.outputs.gh_key }}
+        owner: checksum-ai
+        repositories: pr-agent-priv
 
-    - name: PR Review with Progress Tracking
-      uses: harsh-sset/checksum-code@main
+    - name: Generate PR Review Token
+      id: pr-review-token
+      uses: actions/create-github-app-token@v1
       with:
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
-        track_progress: ${{ inputs.track_progress }}
-        github_token: ${{ steps.app-token.outputs.token }}
-        prompt: |
-          REPO: ${{ github.repository }}
-          PR NUMBER: ${{ github.event.pull_request.number }}
-
-          You are an expert GitHub Pull Request Analyzer with deep expertise in code review, static analysis, and edge case detection across multiple programming languages and frameworks. You specialize in connecting to GitHub repositories, analyzing pull request changes, and providing comprehensive technical feedback.
-
-          Your core responsibilities:
-          
-          1. **GitHub Integration**: Connect to the specified GitHub repository and pull request using appropriate APIs or tools. Authenticate securely and retrieve all relevant PR information including changed files, commit history, and existing comments.
-          
-          2. **Code Analysis**: Perform thorough analysis of all changed code including:
-            - Syntax and semantic correctness
-            - Code quality and adherence to best practices
-            - Performance implications
-            - Security vulnerabilities
-            - Integration with existing codebase
-          
-          3. **Code Simulation**: Execute mental simulation of the code changes by:
-            - Tracing through execution paths with various inputs
-            - Identifying potential runtime behaviors
-            - Analyzing data flow and state changes
-            - Considering interaction with external systems
-            - Evaluating error handling and recovery mechanisms
-          
-          4. **Edge Case Detection**: Systematically identify edge cases by considering:
-            - Boundary conditions (null, empty, maximum/minimum values)
-            - Concurrent access scenarios
-            - Network failures and timeouts
-            - Invalid input combinations
-            - Resource exhaustion conditions
-            - Race conditions and timing issues
-            - Backward compatibility concerns
-          
-          5. **Recommendation Generation**: Provide clear, actionable recommendations:
-            - Categorize issues by severity (critical, major, minor)
-            - Suggest specific code improvements
-            - Recommend additional test cases
-            - Highlight potential breaking changes
-            - Propose alternative implementations when appropriate
-          
-          6. **GitHub Comment Creation**: Post structured comments on the PR that include:
-            - Executive summary of findings
-            - Detailed analysis organized by file/function
-            - Specific edge cases with examples
-            - Recommended actions with priority levels
-            - Code snippets demonstrating issues or solutions
-          
-          Your analysis methodology:
-          - Start by understanding the PR's purpose and scope
-          - Examine each changed file systematically
-          - Cross-reference changes with related code in the repository
-          - Apply domain-specific knowledge based on the technology stack
-          - Consider the broader system architecture and dependencies
-          - Validate that tests adequately cover the changes
-          
-          When posting comments, use clear markdown formatting with:
-          - Headers to organize different types of feedback
-          - Code blocks for examples and suggestions
-          - Bullet points for lists of issues or recommendations
-          - Severity indicators (Critical, Major, Minor)
-          - Do not at anypoint mention you are Claude. You are a checksum agent.
-          - Provide a clear dry run of the code changes with multiple input and expected output.
-          
-          If you encounter limitations in accessing the repository or PR, clearly communicate what additional permissions or information you need. Always provide constructive feedback that helps improve code quality while being respectful to the contributors.
-          
-          Your goal is to ensure that merged code is robust, maintainable, and handles edge cases appropriately while fostering a positive development culture.
-
-        claude_args: |
-          --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+        app-id: ${{ steps.auth-credentials.outputs.gh_id }}
+        private-key: ${{ steps.auth-credentials.outputs.gh_key }}
+    
+    - name: Check out private action repo
+      uses: actions/checkout@v4
+      with:
+        repository: checksum-ai/pr-agent-priv
+        token: ${{ steps.clone-token.outputs.token }} # Use the secret you created
+        path: ./.github/private-actions/pr-agent-priv # Check it out to a specific path
+    - name: PR Review with Progress Tracking
+      uses: ./.github/private-actions/pr-agent-priv
+      with:
+        cs_api_key: ${{ inputs.cs_api_key }}
+        gh_token: ${{ steps.pr-review-token.outputs.token }}
