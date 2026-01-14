@@ -10,6 +10,9 @@ name: Checksum PR Testing
 on:
   pull_request:
     types: [opened, reopened]
+  issue_comment:
+    types: [created]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -18,6 +21,12 @@ permissions:
 jobs:
   pr-testing:
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@checksum-ai')) ||
+      (github.event_name == 'workflow_dispatch')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,47 +51,9 @@ jobs:
 1. Get your API key from [Checksum](https://checksum.ai)
 2. Add `CHECKSUM_API_KEY` as a repository secret (Settings → Secrets and variables → Actions)
 3. Create the workflow file at `.github/workflows/checksum-pr-testing.yml`
-4. Open a PR — Checksum will automatically run and post results
+4. Open a PR or comment `@checksum-ai` on an existing PR to trigger
 
 ## Advanced Usage
-
-### Trigger on @checksum-ai Comment
-
-Run the action when someone comments `@checksum-ai` on a PR:
-
-```yaml
-name: Checksum PR Testing
-
-on:
-  pull_request:
-    types: [opened, reopened]
-  issue_comment:
-    types: [created]
-
-permissions:
-  contents: read
-  pull-requests: write
-
-jobs:
-  pr-testing:
-    runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'pull_request') ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request &&
-       contains(github.event.comment.body, '@checksum-ai'))
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.event.issue.pull_request.head.sha }}
-
-      - name: Run Checksum PR Testing
-        uses: checksum-ai/checksum-action/pr-testing@main
-        with:
-          checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
-```
 
 ### Add Extra Context
 
