@@ -46,9 +46,9 @@ jobs:
 
 ## Advanced Usage
 
-### Trigger on @checksum Comment
+### Trigger on @checksum-ai Comment
 
-Run the action when someone comments `@checksum` on a PR:
+Run the action when someone comments `@checksum-ai` on a PR:
 
 ```yaml
 name: Checksum PR Testing
@@ -70,7 +70,7 @@ jobs:
       (github.event_name == 'pull_request') ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       contains(github.event.comment.body, '@checksum'))
+       contains(github.event.comment.body, '@checksum-ai'))
     steps:
       - name: Checkout
         uses: actions/checkout@v4
