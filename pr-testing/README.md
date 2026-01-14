@@ -28,10 +28,25 @@ jobs:
        contains(github.event.comment.body, '@checksum-ai')) ||
       (github.event_name == 'workflow_dispatch')
     steps:
+      - name: Get PR head ref
+        id: pr-ref
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            return pr.data.head.sha;
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ steps.pr-ref.outputs.result || github.event.pull_request.head.sha }}
 
       - name: Run Checksum PR Testing
         uses: checksum-ai/checksum-action/pr-testing@main
