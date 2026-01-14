@@ -1,0 +1,84 @@
+name: 'Checksum PR Testing'
+description: 'AI-powered functional testing for pull requests'
+author: 'Checksum AI'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  checksum_api_key:
+    description: 'Your Checksum API key'
+    required: true
+  extra_context:
+    description: 'Additional context to provide to the reviewer (optional)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install ripgrep
+      shell: bash
+      run: |
+        if ! command -v rg &> /dev/null; then
+          sudo apt-get update && sudo apt-get install -y ripgrep
+        fi
+
+    - name: Authenticate with Checksum
+      id: auth
+      shell: bash
+      env:
+        CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
+      run: |
+        RESPONSE=$(curl -sf -X POST \
+          "https://aiagents.checksum.ai/agent-services/github-auth-token" \
+          -H "x-api-key: $CHECKSUM_API_KEY")
+
+        if [ $? -ne 0 ]; then
+          echo "::error::Failed to authenticate with Checksum API"
+          exit 1
+        fi
+
+        GITHUB_TOKEN=$(echo "$RESPONSE" | jq -r '.github_token')
+        if [ "$GITHUB_TOKEN" = "null" ] || [ -z "$GITHUB_TOKEN" ]; then
+          echo "::error::Failed to get GitHub token from response"
+          exit 1
+        fi
+
+        echo "github_token=$GITHUB_TOKEN" >> $GITHUB_OUTPUT
+
+    - name: Install PR Testing Agent
+      shell: bash
+      run: |
+        curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
+
+    - name: Run PR Testing
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
+        CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
+        PR_BODY: ${{ github.event.pull_request.body }}
+        EXTRA_CONTEXT: ${{ inputs.extra_context }}
+      run: |
+        PROMPT="Review PR #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+
+        PR Title: ${{ github.event.pull_request.title }}
+        PR URL: ${{ github.event.pull_request.html_url }}
+        Base SHA: ${{ github.event.pull_request.base.sha }}
+        Head SHA: ${{ github.event.pull_request.head.sha }}
+
+        PR Description:
+        $PR_BODY
+
+        Use 'git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}' to see the changes.
+        Use 'gh pr comment ${{ github.event.pull_request.number }} --body-file <file>' to post comments."
+
+        if [ -n "$EXTRA_CONTEXT" ]; then
+          PROMPT="$PROMPT
+
+        Additional Context:
+        $EXTRA_CONTEXT"
+        fi
+
+        ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"

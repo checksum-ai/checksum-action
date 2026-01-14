@@ -1,5 +1,10 @@
 name: "Checksum AI Test Run"
 description: "Create a Checksum test run, wait for completion, and summarize results."
+author: "Checksum AI"
+
+branding:
+  icon: "play-circle"
+  color: "blue"
 
 inputs:
   checksum-api-key:
