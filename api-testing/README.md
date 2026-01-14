@@ -9,9 +9,7 @@ name: "API Testing with Checksum AI"
 
 on:
   pull_request:
-    branches:
-      - main
-      - develop
+    types: [opened, reopened]
   workflow_dispatch: {}
 
 jobs:

@@ -9,7 +9,7 @@ name: Checksum PR Testing
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened]
 
 permissions:
   contents: read
@@ -46,6 +46,44 @@ jobs:
 
 ## Advanced Usage
 
+### Trigger on @checksum Comment
+
+Run the action when someone comments `@checksum` on a PR:
+
+```yaml
+name: Checksum PR Testing
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-testing:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@checksum'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.event.issue.pull_request.head.sha }}
+
+      - name: Run Checksum PR Testing
+        uses: checksum-ai/checksum-action/pr-testing@main
+        with:
+          checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
+```
+
 ### Add Extra Context
 
 ```yaml
@@ -63,7 +101,7 @@ jobs:
 ```yaml
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened]
     branches:
       - main
       - develop
