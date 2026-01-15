@@ -10,6 +10,25 @@ inputs:
   checksum_api_key:
     description: 'Your Checksum API key'
     required: true
+  pr_number:
+    description: 'Pull request number'
+    required: true
+  pr_title:
+    description: 'Pull request title'
+    required: true
+  pr_url:
+    description: 'Pull request URL'
+    required: true
+  base_sha:
+    description: 'Base commit SHA'
+    required: true
+  head_sha:
+    description: 'Head commit SHA'
+    required: true
+  pr_body:
+    description: 'Pull request body/description'
+    required: false
+    default: ''
   extra_context:
     description: 'Additional context to provide to the reviewer (optional)'
     required: false
@@ -31,12 +50,15 @@ runs:
       env:
         CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
       run: |
-        RESPONSE=$(curl -sf -X POST \
+        HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
           "https://aiagents.checksum.ai/agent-services/github-auth-token" \
           -H "x-api-key: $CHECKSUM_API_KEY")
 
-        if [ $? -ne 0 ]; then
-          echo "::error::Failed to authenticate with Checksum API"
+        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+        RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "::error::Failed to authenticate with Checksum API (HTTP $HTTP_CODE)"
           exit 1
         fi
 
@@ -58,21 +80,21 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
         CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
-        PR_BODY: ${{ github.event.pull_request.body }}
+        PR_BODY: ${{ inputs.pr_body }}
         EXTRA_CONTEXT: ${{ inputs.extra_context }}
       run: |
-        PROMPT="Review PR #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+        PROMPT="Review PR #${{ inputs.pr_number }} in ${{ github.repository }}.
 
-        PR Title: ${{ github.event.pull_request.title }}
-        PR URL: ${{ github.event.pull_request.html_url }}
-        Base SHA: ${{ github.event.pull_request.base.sha }}
-        Head SHA: ${{ github.event.pull_request.head.sha }}
+        PR Title: ${{ inputs.pr_title }}
+        PR URL: ${{ inputs.pr_url }}
+        Base SHA: ${{ inputs.base_sha }}
+        Head SHA: ${{ inputs.head_sha }}
 
         PR Description:
         $PR_BODY
 
-        Use 'git diff ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}' to see the changes.
-        Use 'gh pr comment ${{ github.event.pull_request.number }} --body-file <file>' to post comments."
+        Use 'git diff ${{ inputs.base_sha }}..${{ inputs.head_sha }}' to see the changes.
+        Use 'gh pr comment ${{ inputs.pr_number }} --body-file <file>' to post comments."
 
         if [ -n "$EXTRA_CONTEXT" ]; then
           PROMPT="$PROMPT

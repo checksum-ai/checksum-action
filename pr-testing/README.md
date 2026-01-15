@@ -28,30 +28,45 @@ jobs:
        contains(github.event.comment.body, '@checksum-ai')) ||
       (github.event_name == 'workflow_dispatch')
     steps:
-      - name: Get PR head ref
-        id: pr-ref
-        if: github.event_name == 'issue_comment'
+      - name: Get PR details
+        id: pr
         uses: actions/github-script@v7
         with:
-          result-encoding: string
           script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            return pr.data.head.sha;
+            let pr;
+            if (context.eventName === 'pull_request') {
+              pr = context.payload.pull_request;
+            } else {
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number
+              });
+              pr = data;
+            }
+            core.setOutput('number', pr.number);
+            core.setOutput('title', pr.title);
+            core.setOutput('url', pr.html_url);
+            core.setOutput('base_sha', pr.base.sha);
+            core.setOutput('head_sha', pr.head.sha);
+            core.setOutput('body', pr.body || '');
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ steps.pr-ref.outputs.result || github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr.outputs.head_sha }}
 
       - name: Run Checksum PR Testing
         uses: checksum-ai/checksum-action/pr-testing@main
         with:
           checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
+          pr_number: ${{ steps.pr.outputs.number }}
+          pr_title: ${{ steps.pr.outputs.title }}
+          pr_url: ${{ steps.pr.outputs.url }}
+          base_sha: ${{ steps.pr.outputs.base_sha }}
+          head_sha: ${{ steps.pr.outputs.head_sha }}
+          pr_body: ${{ steps.pr.outputs.body }}
 ```
 
 ## Inputs
@@ -59,6 +74,12 @@ jobs:
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `checksum_api_key` | Your Checksum API key | Yes | - |
+| `pr_number` | Pull request number | Yes | - |
+| `pr_title` | Pull request title | Yes | - |
+| `pr_url` | Pull request URL | Yes | - |
+| `base_sha` | Base commit SHA | Yes | - |
+| `head_sha` | Head commit SHA | Yes | - |
+| `pr_body` | Pull request body/description | No | `""` |
 | `extra_context` | Additional context for the reviewer | No | `""` |
 
 ## Setup
