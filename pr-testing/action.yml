@@ -83,7 +83,9 @@ runs:
         PR_BODY: ${{ inputs.pr_body }}
         EXTRA_CONTEXT: ${{ inputs.extra_context }}
       run: |
-        PROMPT="Review PR #${{ inputs.pr_number }} in ${{ github.repository }}.
+        PROMPT="You are reviewing a GitHub Pull Request.
+
+        Review PR #${{ inputs.pr_number }} in ${{ github.repository }}.
 
         PR Title: ${{ inputs.pr_title }}
         PR URL: ${{ inputs.pr_url }}

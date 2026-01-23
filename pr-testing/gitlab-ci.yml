@@ -1,37 +1,60 @@
-checksum-pr-review:
-  image: ubuntu:latest
+# Checksum PR Review - Base Template
+# Users extend this job and provide required variables
+#
+# Usage:
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/pr-testing/gitlab-ci.yml'
+#
+#   checksum-pr-review:
+#     extends: .checksum-pr-review-base
+#     rules:
+#       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#     variables:
+#       CHECKSUM_API_KEY: $CHECKSUM_API_KEY
+#       MR_NUMBER: $CI_MERGE_REQUEST_IID
+#       PROJECT_PATH: $CI_PROJECT_PATH
+#       MR_TITLE: $CI_MERGE_REQUEST_TITLE
+#       MR_URL: "$CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID"
+#       BASE_SHA: $CI_MERGE_REQUEST_DIFF_BASE_SHA
+#       HEAD_SHA: $CI_COMMIT_SHA
+#       MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
 
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+.checksum-pr-review-base:
+  image: gitlab/glab:latest  # Alpine-based, has glab CLI preinstalled
 
   variables:
     GIT_DEPTH: 0
 
   before_script:
-    - apt-get update && apt-get install -y curl jq git ripgrep
+    - apk add --no-cache curl jq bash ripgrep
+    # Authenticate glab CLI for MR comments
+    - glab auth login --token $GITLAB_ACCESS_TOKEN --hostname $CI_SERVER_HOST
 
   script:
-    # Install PR Testing Agent
-    - curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
-
-    # Run PR Testing
     - |
-      PROMPT="Review MR !$CI_MERGE_REQUEST_IID in $CI_PROJECT_PATH.
+      if [ -z "$CHECKSUM_API_KEY" ]; then
+        echo "Error: CHECKSUM_API_KEY is required"
+        exit 1
+      fi
+      if [ -z "$MR_NUMBER" ]; then
+        echo "Error: MR_NUMBER is required"
+        exit 1
+      fi
 
-      MR Title: $CI_MERGE_REQUEST_TITLE
-      MR URL: $CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID
-      Base SHA: $CI_MERGE_REQUEST_DIFF_BASE_SHA
-      Head SHA: $CI_COMMIT_SHA
+      curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
+
+      ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
+
+      Review MR !$MR_NUMBER in $PROJECT_PATH.
+
+      MR Title: $MR_TITLE
+      MR URL: $MR_URL
+      Base SHA: $BASE_SHA
+      Head SHA: $HEAD_SHA
 
       MR Description:
-      $CI_MERGE_REQUEST_DESCRIPTION
+      $MR_DESCRIPTION
 
-      Use 'git diff $CI_MERGE_REQUEST_DIFF_BASE_SHA..$CI_COMMIT_SHA' to see the changes.
+      Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
 
-      To post comments, use the GitLab API:
-      curl --request POST \\
-        --header \"JOB-TOKEN: \$CI_JOB_TOKEN\" \\
-        --form \"body=Your comment here\" \\
-        \"\$CI_API_V4_URL/projects/\$CI_PROJECT_ID/merge_requests/\$CI_MERGE_REQUEST_IID/notes\""
-
-      ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
+      To post comments, use the glab CLI: glab mr note $MR_NUMBER --message \"<comment>\""
