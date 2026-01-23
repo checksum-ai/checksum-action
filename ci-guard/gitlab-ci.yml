@@ -28,7 +28,7 @@
   before_script:
     - apk add --no-cache curl jq bash ripgrep
     # Authenticate glab CLI for MR comments
-    - glab auth login --token $GITLAB_ACCESS_TOKEN --hostname $CI_SERVER_HOST
+    - glab auth login --token $GITLAB_TOKEN --hostname $CI_SERVER_HOST
 
   script:
     - |

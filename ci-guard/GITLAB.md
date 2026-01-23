@@ -6,14 +6,30 @@ AI-powered code review for GitLab Merge Requests.
 
 ### 1. Add your API keys
 
-Go to **Settings -> CI/CD -> Variables** and add:
+Go to **Settings → CI/CD → Variables** and add:
 
 | Variable | Value | Flags |
 |----------|-------|-------|
 | `CHECKSUM_API_KEY` | Your API key from [checksum.ai](https://checksum.ai) | Mask variable |
-| `GITLAB_ACCESS_TOKEN` | A Personal Access Token with `api` scope | Mask variable |
+| `GITLAB_TOKEN` | A Project Access Token (see below) | Mask variable |
 
-> **Note:** The `GITLAB_ACCESS_TOKEN` is used by the `glab` CLI to post comments on your MR. Create one at **Settings -> Access Tokens**.
+#### Creating a Project Access Token (step-by-step)
+
+1. Go to your project in GitLab
+2. Navigate to **Settings → Access Tokens** (left sidebar)
+3. Fill in the form:
+   - **Token name**: `checksum-ci-guard` (or any name you prefer)
+   - **Expiration date**: Set a date (recommended: 1 year). If left blank, GitLab auto-sets an expiry (often 30 days). Max lifetime is 365 days by default.
+   - **Select a role**: Choose **Reporter**
+   - **Select scopes**: Check only **`api`**
+4. Click **Create project access token**
+5. **Copy the token immediately** - you won't see it again!
+6. Add it as a CI/CD variable named `GITLAB_TOKEN`
+
+> **Why Project Access Token?** Unlike Personal Access Tokens, Project Access Tokens:
+> - Are scoped to this project only (more secure)
+> - Won't break if a team member leaves
+> - Create a bot user, so comments show as from "project_123_bot"
 
 ### 2. Create `.gitlab-ci.yml`
 
@@ -29,7 +45,7 @@ checksum-ci-guard:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
     CHECKSUM_API_KEY: $CHECKSUM_API_KEY
-    GITLAB_ACCESS_TOKEN: $GITLAB_ACCESS_TOKEN
+    GITLAB_TOKEN: $GITLAB_TOKEN
     MR_NUMBER: $CI_MERGE_REQUEST_IID
     PROJECT_PATH: $CI_PROJECT_PATH
     MR_TITLE: $CI_MERGE_REQUEST_TITLE
@@ -111,7 +127,7 @@ checksum-ci-guard:
 | Variable | Description | Source |
 |----------|-------------|--------|
 | `CHECKSUM_API_KEY` | Your Checksum API key | CI/CD Variable |
-| `GITLAB_ACCESS_TOKEN` | Personal Access Token with `api` scope | CI/CD Variable |
+| `GITLAB_TOKEN` | Project Access Token with `api` scope (Reporter role) | CI/CD Variable |
 | `MR_NUMBER` | The MR number | `$CI_MERGE_REQUEST_IID` |
 | `PROJECT_PATH` | Project path (e.g., `group/project`) | `$CI_PROJECT_PATH` |
 | `MR_TITLE` | MR title | `$CI_MERGE_REQUEST_TITLE` |
@@ -132,6 +148,6 @@ Make sure you've added `CHECKSUM_API_KEY` as a CI/CD variable and included it in
 
 ### Comments not appearing
 
-1. Verify `GITLAB_ACCESS_TOKEN` is set and has `api` scope
-2. Check that the token owner has permission to comment on MRs
+1. Verify `GITLAB_TOKEN` is set and has `api` scope
+2. Check that the Project Access Token has at least **Reporter** role
 3. Review the job logs for glab authentication errors
