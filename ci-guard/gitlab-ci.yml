@@ -1,0 +1,60 @@
+# Checksum CI Guard - Base Template
+# Users extend this job and provide required variables
+#
+# Usage:
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/ci-guard/gitlab-ci.yml'
+#
+#   checksum-ci-guard:
+#     extends: .checksum-ci-guard-base
+#     rules:
+#       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+#     variables:
+#       CHECKSUM_API_KEY: $CHECKSUM_API_KEY
+#       MR_NUMBER: $CI_MERGE_REQUEST_IID
+#       PROJECT_PATH: $CI_PROJECT_PATH
+#       MR_TITLE: $CI_MERGE_REQUEST_TITLE
+#       MR_URL: "$CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID"
+#       BASE_SHA: $CI_MERGE_REQUEST_DIFF_BASE_SHA
+#       HEAD_SHA: $CI_COMMIT_SHA
+#       MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
+
+.checksum-ci-guard-base:
+  image: gitlab/glab:latest  # Alpine-based, has glab CLI preinstalled
+
+  variables:
+    GIT_DEPTH: 0
+
+  before_script:
+    - apk add --no-cache curl jq bash ripgrep
+    # Authenticate glab CLI for MR comments
+    - glab auth login --token $GITLAB_ACCESS_TOKEN --hostname $CI_SERVER_HOST
+
+  script:
+    - |
+      if [ -z "$CHECKSUM_API_KEY" ]; then
+        echo "Error: CHECKSUM_API_KEY is required"
+        exit 1
+      fi
+      if [ -z "$MR_NUMBER" ]; then
+        echo "Error: MR_NUMBER is required"
+        exit 1
+      fi
+
+      curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
+
+      ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
+
+      Review MR !$MR_NUMBER in $PROJECT_PATH.
+
+      MR Title: $MR_TITLE
+      MR URL: $MR_URL
+      Base SHA: $BASE_SHA
+      Head SHA: $HEAD_SHA
+
+      MR Description:
+      $MR_DESCRIPTION
+
+      Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
+
+      To post comments, use the glab CLI: glab mr note $MR_NUMBER --message \"<comment>\""
