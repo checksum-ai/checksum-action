@@ -17,14 +17,15 @@ Go to **Settings → CI/CD → Variables** and add:
 
 1. Go to your project in GitLab
 2. Navigate to **Settings → Access Tokens** (left sidebar)
-3. Fill in the form:
+3. Click **Add new token**
+4. Fill in the form:
    - **Token name**: `checksum-ci-guard` (or any name you prefer)
    - **Expiration date**: Set a date (recommended: 1 year). If left blank, GitLab auto-sets an expiry (often 30 days). Max lifetime is 365 days by default.
    - **Select a role**: Choose **Reporter**
    - **Select scopes**: Check only **`api`**
-4. Click **Create project access token**
-5. **Copy the token immediately** - you won't see it again!
-6. Add it as a CI/CD variable named `GITLAB_TOKEN`
+5. Click **Create project access token**
+6. **Copy the token immediately** - you won't see it again!
+7. Add it as a CI/CD variable Key `GITLAB_TOKEN`
 
 > **Why Project Access Token?** Unlike Personal Access Tokens, Project Access Tokens:
 > - Are scoped to this project only (more secure)
