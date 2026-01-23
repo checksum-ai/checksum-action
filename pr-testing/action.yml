@@ -33,6 +33,10 @@ inputs:
     description: 'Additional context to provide to the reviewer (optional)'
     required: false
     default: ''
+  artifact_retention_days:
+    description: 'Number of days to retain the test artifacts'
+    required: false
+    default: '60'
 
 runs:
   using: 'composite'
@@ -48,3 +52,4 @@ runs:
         head_sha: ${{ inputs.head_sha }}
         pr_body: ${{ inputs.pr_body }}
         extra_context: ${{ inputs.extra_context }}
+        artifact_retention_days: ${{ inputs.artifact_retention_days }}

@@ -33,6 +33,10 @@ inputs:
     description: 'Additional context to provide to the reviewer (optional)'
     required: false
     default: ''
+  artifact_retention_days:
+    description: 'Number of days to retain the test artifacts'
+    required: false
+    default: '60'
 
 runs:
   using: 'composite'
@@ -91,6 +95,7 @@ runs:
         PR URL: ${{ inputs.pr_url }}
         Base SHA: ${{ inputs.base_sha }}
         Head SHA: ${{ inputs.head_sha }}
+        GitHub Run ID: ${{ github.run_id }}
 
         PR Description:
         $PR_BODY
@@ -106,3 +111,50 @@ runs:
         fi
 
         ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
+
+    - name: Check for generated tests
+      id: check-tests
+      shell: bash
+      run: |
+        if find tmp -name "*.py" 2>/dev/null | grep -q .; then
+          echo "has_tests=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_tests=false" >> $GITHUB_OUTPUT
+          echo "::warning::No test files found in tmp/"
+        fi
+
+    - name: Create metadata.json
+      if: steps.check-tests.outputs.has_tests == 'true'
+      shell: bash
+      run: |
+        jq -n \
+          --arg repository "${{ github.repository }}" \
+          --arg repo_owner "${{ github.repository_owner }}" \
+          --arg repo_name "${{ github.event.repository.name }}" \
+          --arg pr_number "${{ inputs.pr_number }}" \
+          --arg pr_title "${{ inputs.pr_title }}" \
+          --arg pr_url "${{ inputs.pr_url }}" \
+          --arg head_sha "${{ inputs.head_sha }}" \
+          --arg base_sha "${{ inputs.base_sha }}" \
+          --arg workflow_run_id "${{ github.run_id }}" \
+          --arg generated_at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+          '{
+            repository: $repository,
+            repo_owner: $repo_owner,
+            repo_name: $repo_name,
+            pr_number: $pr_number,
+            pr_title: $pr_title,
+            pr_url: $pr_url,
+            head_sha: $head_sha,
+            base_sha: $base_sha,
+            workflow_run_id: $workflow_run_id,
+            generated_at: $generated_at
+          }' > tmp/metadata.json
+
+    - name: Upload tests as GitHub Artifact
+      if: steps.check-tests.outputs.has_tests == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: pr-${{ inputs.pr_number }}-${{ github.run_id }}-tests
+        path: tmp/
+        retention-days: ${{ inputs.artifact_retention_days }}
