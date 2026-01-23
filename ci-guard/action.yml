@@ -158,3 +158,27 @@ runs:
         name: pr-${{ inputs.pr_number }}-${{ github.run_id }}-tests
         path: tmp/
         retention-days: ${{ inputs.artifact_retention_days }}
+
+    - name: Upload tests to Checksum
+      if: steps.check-tests.outputs.has_tests == 'true'
+      shell: bash
+      env:
+        CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
+      run: |
+        tar -czf /tmp/pr-tests.tar.gz -C tmp .
+
+        HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+          "https://aiagents.checksum.ai/agent-services/pr-tests/upload" \
+          -H "x-api-key: $CHECKSUM_API_KEY" \
+          -F "file=@/tmp/pr-tests.tar.gz" \
+          -F "repo_owner=${{ github.repository_owner }}" \
+          -F "repo_name=${{ github.event.repository.name }}" \
+          -F "pr_number=${{ inputs.pr_number }}" \
+          -F "run_id=${{ github.run_id }}")
+
+        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+        HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+        if [ "$HTTP_CODE" != "201" ]; then
+          echo "::warning::Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
+        fi
