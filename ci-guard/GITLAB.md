@@ -1,4 +1,4 @@
-# Checksum PR Review for GitLab
+# Checksum CI Guard for GitLab
 
 AI-powered code review for GitLab Merge Requests.
 
@@ -6,14 +6,14 @@ AI-powered code review for GitLab Merge Requests.
 
 ### 1. Add your API keys
 
-Go to **Settings → CI/CD → Variables** and add:
+Go to **Settings -> CI/CD -> Variables** and add:
 
 | Variable | Value | Flags |
 |----------|-------|-------|
 | `CHECKSUM_API_KEY` | Your API key from [checksum.ai](https://checksum.ai) | Mask variable |
 | `GITLAB_ACCESS_TOKEN` | A Personal Access Token with `api` scope | Mask variable |
 
-> **Note:** The `GITLAB_ACCESS_TOKEN` is used by the `glab` CLI to post comments on your MR. Create one at **Settings → Access Tokens**.
+> **Note:** The `GITLAB_ACCESS_TOKEN` is used by the `glab` CLI to post comments on your MR. Create one at **Settings -> Access Tokens**.
 
 ### 2. Create `.gitlab-ci.yml`
 
@@ -21,10 +21,10 @@ Add this to your repository:
 
 ```yaml
 include:
-  - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/pr-testing/gitlab-ci.yml'
+  - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/ci-guard/gitlab-ci.yml'
 
-checksum-pr-review:
-  extends: .checksum-pr-review-base
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
@@ -46,7 +46,7 @@ The review will automatically run when you create or update an MR.
 ## How It Works
 
 This uses GitLab's **hidden job + extends** pattern:
-- The remote template provides a hidden job (`.checksum-pr-review-base`) with the core logic
+- The remote template provides a hidden job (`.checksum-ci-guard-base`) with the core logic
 - You create a job that `extends` it and provides your variables and rules
 - You control when and how the review runs
 
@@ -55,8 +55,8 @@ This uses GitLab's **hidden job + extends** pattern:
 ### Run only on specific branches
 
 ```yaml
-checksum-pr-review:
-  extends: .checksum-pr-review-base
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
   variables:
@@ -66,8 +66,8 @@ checksum-pr-review:
 ### Run manually
 
 ```yaml
-checksum-pr-review:
-  extends: .checksum-pr-review-base
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
@@ -78,8 +78,8 @@ checksum-pr-review:
 ### Add extra context
 
 ```yaml
-checksum-pr-review:
-  extends: .checksum-pr-review-base
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:

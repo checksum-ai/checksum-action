@@ -1,5 +1,5 @@
-name: 'Checksum PR Testing'
-description: 'AI-powered functional testing for pull requests'
+name: 'Checksum CI Guard'
+description: 'AI-powered code review for pull requests (legacy path - use ci-guard/)'
 author: 'Checksum AI'
 
 branding:
@@ -37,72 +37,14 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install ripgrep
-      shell: bash
-      run: |
-        if ! command -v rg &> /dev/null; then
-          sudo apt-get update && sudo apt-get install -y ripgrep
-        fi
-
-    - name: Authenticate with Checksum
-      id: auth
-      shell: bash
-      env:
-        CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
-      run: |
-        HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
-          "https://aiagents.checksum.ai/agent-services/github-auth-token" \
-          -H "x-api-key: $CHECKSUM_API_KEY")
-
-        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
-        RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
-
-        if [ "$HTTP_CODE" != "200" ]; then
-          echo "::error::Failed to authenticate with Checksum API (HTTP $HTTP_CODE)"
-          exit 1
-        fi
-
-        GITHUB_TOKEN=$(echo "$RESPONSE" | jq -r '.github_token')
-        if [ "$GITHUB_TOKEN" = "null" ] || [ -z "$GITHUB_TOKEN" ]; then
-          echo "::error::Failed to get GitHub token from response"
-          exit 1
-        fi
-
-        echo "github_token=$GITHUB_TOKEN" >> $GITHUB_OUTPUT
-
-    - name: Install PR Testing Agent
-      shell: bash
-      run: |
-        curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
-
-    - name: Run PR Testing
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
-        CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
-        PR_BODY: ${{ inputs.pr_body }}
-        EXTRA_CONTEXT: ${{ inputs.extra_context }}
-      run: |
-        PROMPT="You are reviewing a GitHub Pull Request.
-
-        Review PR #${{ inputs.pr_number }} in ${{ github.repository }}.
-
-        PR Title: ${{ inputs.pr_title }}
-        PR URL: ${{ inputs.pr_url }}
-        Base SHA: ${{ inputs.base_sha }}
-        Head SHA: ${{ inputs.head_sha }}
-
-        PR Description:
-        $PR_BODY
-
-        Use 'git diff ${{ inputs.base_sha }}..${{ inputs.head_sha }}' to see the changes.
-        Use 'gh pr comment ${{ inputs.pr_number }} --body-file <file>' to post comments."
-
-        if [ -n "$EXTRA_CONTEXT" ]; then
-          PROMPT="$PROMPT
-
-        Additional Context:
-        $EXTRA_CONTEXT"
-        fi
-
-        ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
+    - name: Run CI Guard
+      uses: checksum-ai/checksum-action/ci-guard@main
+      with:
+        checksum_api_key: ${{ inputs.checksum_api_key }}
+        pr_number: ${{ inputs.pr_number }}
+        pr_title: ${{ inputs.pr_title }}
+        pr_url: ${{ inputs.pr_url }}
+        base_sha: ${{ inputs.base_sha }}
+        head_sha: ${{ inputs.head_sha }}
+        pr_body: ${{ inputs.pr_body }}
+        extra_context: ${{ inputs.extra_context }}

@@ -14,12 +14,12 @@ Run Checksum AI test suites in your CI/CD pipeline.
     checksum-api-key: ${{ secrets.CHECKSUM_API_KEY }}
 ```
 
-### [PR Testing](./pr-testing)
+### [CI Guard](./ci-guard)
 
-Automated functional testing for pull requests.
+AI-powered code review for pull requests.
 
 ```yaml
-- uses: checksum-ai/checksum-action/pr-testing@main
+- uses: checksum-ai/checksum-action/ci-guard@main
   with:
     checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
 ```

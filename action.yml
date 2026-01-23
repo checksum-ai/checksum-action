@@ -1,5 +1,5 @@
-name: 'Checksum PR Testing Agent'
-description: 'Perform PR reviews with Checksum and progress tracking'
+name: 'Checksum CI Guard'
+description: 'AI-powered code review with Checksum'
 inputs:
   cs_api_key:
     description: 'Checksum API KEY'

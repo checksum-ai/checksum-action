@@ -1,12 +1,12 @@
-# Checksum PR Review - Base Template
+# Checksum CI Guard - Base Template
 # Users extend this job and provide required variables
 #
 # Usage:
 #   include:
-#     - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/pr-testing/gitlab-ci.yml'
+#     - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/ci-guard/gitlab-ci.yml'
 #
-#   checksum-pr-review:
-#     extends: .checksum-pr-review-base
+#   checksum-ci-guard:
+#     extends: .checksum-ci-guard-base
 #     rules:
 #       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 #     variables:
@@ -19,7 +19,7 @@
 #       HEAD_SHA: $CI_COMMIT_SHA
 #       MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
 
-.checksum-pr-review-base:
+.checksum-ci-guard-base:
   image: gitlab/glab:latest  # Alpine-based, has glab CLI preinstalled
 
   variables:
