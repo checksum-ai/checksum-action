@@ -83,6 +83,55 @@ runs:
         PR_BODY: ${{ inputs.pr_body }}
         EXTRA_CONTEXT: ${{ inputs.extra_context }}
       run: |
+        # Capture diff with file-level truncation
+        capture_truncated_diff() {
+          local BASE_SHA="$1"
+          local HEAD_SHA="$2"
+          local MAX_TOTAL=100000
+          local MAX_PER_FILE=10000
+
+          # Get list of changed files
+          local CHANGED_FILES=$(git diff --name-only "$BASE_SHA".."$HEAD_SHA")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changes detected."
+            return
+          fi
+
+          local FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
+
+          # Calculate per-file budget (divide total by file count, capped at MAX_PER_FILE)
+          local PER_FILE_BUDGET=$((MAX_TOTAL / FILE_COUNT))
+          [ "$PER_FILE_BUDGET" -gt "$MAX_PER_FILE" ] && PER_FILE_BUDGET=$MAX_PER_FILE
+
+          # Output file list with stats
+          echo "Changed files ($FILE_COUNT):"
+          git diff --stat "$BASE_SHA".."$HEAD_SHA" | head -50
+          echo ""
+          echo "---"
+          echo ""
+
+          # Build truncated diff
+          echo "$CHANGED_FILES" | while read -r FILE; do
+            [ -z "$FILE" ] && continue
+
+            local FILE_DIFF=$(git diff "$BASE_SHA".."$HEAD_SHA" -- "$FILE")
+            local ACTUAL_SIZE=${#FILE_DIFF}
+
+            if [ "$ACTUAL_SIZE" -gt "$PER_FILE_BUDGET" ]; then
+              echo "${FILE_DIFF:0:$PER_FILE_BUDGET}"
+              echo ""
+              echo "... [${FILE} truncated: showing $PER_FILE_BUDGET of $ACTUAL_SIZE bytes. Use 'git diff $BASE_SHA..$HEAD_SHA -- \"$FILE\"' for full diff]"
+              echo ""
+            else
+              echo "$FILE_DIFF"
+            fi
+          done
+        }
+
+        # Capture the diff
+        DIFF_OUTPUT=$(capture_truncated_diff "${{ inputs.base_sha }}" "${{ inputs.head_sha }}")
+
         PROMPT="You are reviewing a GitHub Pull Request.
 
         Review PR #${{ inputs.pr_number }} in ${{ github.repository }}.
@@ -95,7 +144,13 @@ runs:
         PR Description:
         $PR_BODY
 
-        Use 'git diff ${{ inputs.base_sha }}..${{ inputs.head_sha }}' to see the changes.
+        ## Changes
+
+        $DIFF_OUTPUT
+
+        ---
+        Note: Large diffs may be truncated per-file. Use 'git diff' or 'git show' for full content if needed.
+
         Use 'gh pr comment ${{ inputs.pr_number }} --body-file <file>' to post comments."
 
         if [ -n "$EXTRA_CONTEXT" ]; then
