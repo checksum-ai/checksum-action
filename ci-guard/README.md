@@ -1,8 +1,12 @@
 # Checksum CI Guard
 
-AI-powered code review for pull requests. Automatically analyzes code changes, generates tests, runs them, and posts results as PR comments.
+AI-powered code review for pull requests. Automatically analyzes code changes, generates tests, runs them, and posts results as PR/MR comments.
 
-## Usage
+---
+
+## GitHub Actions
+
+### Usage
 
 ```yaml
 name: Checksum CI Guard
@@ -69,7 +73,7 @@ jobs:
           pr_body: ${{ steps.pr.outputs.body }}
 ```
 
-## Inputs
+### Inputs
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
@@ -82,16 +86,16 @@ jobs:
 | `pr_body` | Pull request body/description | No | `""` |
 | `extra_context` | Additional context for the reviewer | No | `""` |
 
-## Setup
+### Setup
 
 1. Get your API key from [Checksum](https://checksum.ai)
 2. Add `CHECKSUM_API_KEY` as a repository secret (Settings -> Secrets and variables -> Actions)
 3. Create the workflow file at `.github/workflows/checksum-ci-guard.yml`
 4. Open a PR or comment `@checksum-ai` on an existing PR to trigger
 
-## Advanced Usage
+### Advanced Usage
 
-### Add Extra Context
+#### Add Extra Context
 
 ```yaml
 - name: Run Checksum CI Guard
@@ -103,7 +107,7 @@ jobs:
       Use existing test fixtures from tests/conftest.py.
 ```
 
-### Run Only on Specific Branches
+#### Run Only on Specific Branches
 
 ```yaml
 on:
@@ -114,7 +118,7 @@ on:
       - develop
 ```
 
-### Run Only with a Label
+#### Run Only with a Label
 
 ```yaml
 jobs:
@@ -124,12 +128,105 @@ jobs:
     # ...
 ```
 
-## Requirements
+### Requirements
 
 - GitHub Actions runner: `ubuntu-latest`
 - Repository permissions: `contents: read`, `pull-requests: write`
 - Full git history: `fetch-depth: 0` in checkout step
+- **Runtime environment**: The runner must have your project's test dependencies installed (e.g., Node.js, Python, etc.). Use setup actions like `actions/setup-node` or `actions/setup-python` before running CI Guard.
 
-## Backwards Compatibility
+### Backwards Compatibility
 
 The legacy path `checksum-ai/checksum-action/pr-testing@main` still works and redirects to this action.
+
+---
+
+## GitLab CI
+
+### Usage
+
+Add to your `.gitlab-ci.yml`:
+
+```yaml
+include:
+  - remote: 'https://raw.githubusercontent.com/checksum-ai/checksum-action/main/ci-guard/gitlab-ci.yml'
+
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    MR_NUMBER: $CI_MERGE_REQUEST_IID
+    PROJECT_PATH: $CI_PROJECT_PATH
+    MR_TITLE: $CI_MERGE_REQUEST_TITLE
+    MR_URL: "$CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID"
+    BASE_SHA: $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    HEAD_SHA: $CI_COMMIT_SHA
+    MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
+```
+
+### Setup
+
+1. Get your API key from [Checksum](https://checksum.ai)
+2. Create a **Project Access Token** (Settings -> Access Tokens):
+   - Name: `checksum-ci-guard`
+   - Role: `Developer`
+   - Scopes: `api`
+3. Add CI/CD variables (Settings -> CI/CD -> Variables):
+   - `CHECKSUM_API_KEY`: Your Checksum API key
+   - `GITLAB_TOKEN`: The Project Access Token from step 2
+
+> **IMPORTANT: Do NOT mark variables as "Protected"**
+>
+> MR pipelines run on non-protected refs (`refs/merge-requests/X/head`). Protected variables are only available on protected branches, so they won't work for MR pipelines.
+
+### Advanced Usage
+
+#### Custom Variable Names
+
+If your CI/CD variables have different names:
+
+```yaml
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  variables:
+    CHECKSUM_API_KEY_VAR: "MY_API_KEY"
+    GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN"
+    # ... other variables
+```
+
+#### Custom Runtime Environment
+
+The default image is `debian:bookworm-slim`. If your project needs specific runtimes (Node.js, Python, etc.), override the image:
+
+```yaml
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  image: node:20-bookworm  # Use Node.js 20 with Debian base
+  # ... rest of config
+```
+
+Or install dependencies in `before_script`:
+
+```yaml
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
+    # Install glab CLI
+    - |
+      GLAB_VERSION=$(curl -s "https://gitlab.com/api/v4/projects/34675721/releases/permalink/latest" | jq -r '.tag_name')
+      curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/${GLAB_VERSION}/downloads/glab_${GLAB_VERSION#v}_linux_amd64.deb" -o /tmp/glab.deb
+      dpkg -i /tmp/glab.deb && rm /tmp/glab.deb
+    # Add your project dependencies
+    - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    - apt-get install -y nodejs
+  # ... rest of config
+```
+
+### Requirements
+
+- GitLab CI runner with Docker support
+- CI/CD variables: `CHECKSUM_API_KEY`, `GITLAB_TOKEN`
+- Full git history: `GIT_DEPTH: 0` (set by default in base template)
+- **Runtime environment**: Override the image or extend `before_script` to install your project's test dependencies
