@@ -4,20 +4,15 @@ AI-powered code review for GitLab Merge Requests. Automatically analyzes code ch
 
 ## Quick Setup
 
-### 1. Add your API keys
+### 1. Get your API keys
 
-Go to **Settings → CI/CD → Variables** and add:
+You'll need two tokens:
 
-| Variable | Value | Flags |
-|----------|-------|-------|
-| `CHECKSUM_API_KEY` | Your API key from [checksum.ai](https://checksum.ai) | Mask variable |
-| `GITLAB_TOKEN` | A Project Access Token (see below) | Mask variable |
+#### Checksum API Key
 
-> ⚠️ **IMPORTANT: Do NOT mark variables as "Protected"**
->
-> MR pipelines run on non-protected refs (`refs/merge-requests/X/head`). Protected variables are only available on protected branches, so **they won't work for MR pipelines**.
+Get your API key from [checksum.ai](https://checksum.ai).
 
-#### Creating a Project Access Token (step-by-step)
+#### GitLab Project Access Token
 
 1. Go to your project in GitLab
 2. Navigate to **Settings → Access Tokens** (left sidebar)
@@ -29,14 +24,26 @@ Go to **Settings → CI/CD → Variables** and add:
    - **Select scopes**: Check only **`api`**
 5. Click **Create project access token**
 6. **Copy the token immediately** - you won't see it again!
-7. Add it as a CI/CD variable with key `GITLAB_TOKEN`
 
 > **Why Project Access Token?** Unlike Personal Access Tokens, Project Access Tokens:
 > - Are scoped to this project only (more secure)
 > - Won't break if a team member leaves
 > - Create a bot user, so comments show as from "project_123_bot"
 
-### 2. Create `.gitlab-ci.yml`
+### 2. Add CI/CD variables
+
+Go to **Settings → CI/CD → Variables** and add:
+
+| Variable | Value | Flags |
+|----------|-------|-------|
+| `CHECKSUM_API_KEY` | Your Checksum API key | Mask variable |
+| `GITLAB_TOKEN` | The Project Access Token you created | Mask variable |
+
+> ⚠️ **IMPORTANT: Do NOT mark variables as "Protected"**
+>
+> MR pipelines run on non-protected refs (`refs/merge-requests/X/head`). Protected variables are only available on protected branches, so **they won't work for MR pipelines**.
+
+### 3. Create `.gitlab-ci.yml`
 
 Add this to your repository:
 
@@ -46,6 +53,13 @@ include:
 
 checksum-ci-guard:
   extends: .checksum-ci-guard-base
+  # ⚠️ IMPORTANT: Use an image with your project's runtime installed
+  # ❌ Do NOT use Alpine images - the agent requires glibc
+  image: node:20-bookworm       # Node.js
+  # image: python:3.12-bookworm # Python
+  # image: golang:1.22-bookworm # Go
+  # image: ruby:3.3-bookworm    # Ruby
+  # image: rust:1.75-bookworm   # Rust
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
@@ -60,7 +74,7 @@ checksum-ci-guard:
 
 > **Note:** `CHECKSUM_API_KEY` and `GITLAB_TOKEN` are automatically picked up from your CI/CD variables. No need to map them in the `variables:` section.
 
-### 3. Open a Merge Request
+### 4. Open a Merge Request
 
 The review will automatically run when you create or update an MR.
 
