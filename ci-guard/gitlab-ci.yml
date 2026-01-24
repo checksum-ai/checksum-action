@@ -20,13 +20,15 @@
 #       MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
 
 .checksum-ci-guard-base:
-  image: gitlab/glab:latest  # Alpine-based, has glab CLI preinstalled
+  image: debian:bookworm-slim  # Debian-based for glibc compatibility with e2e-agent binary
 
   variables:
     GIT_DEPTH: 0
 
   before_script:
-    - apk add --no-cache curl jq bash ripgrep
+    - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
+    # Install glab CLI from GitLab releases
+    - curl -fsSL https://gitlab.com/gitlab-org/cli/-/releases/permalink/latest/downloads/glab_linux_amd64.deb -o /tmp/glab.deb && dpkg -i /tmp/glab.deb && rm /tmp/glab.deb
     # Authenticate glab CLI for MR comments
     - glab auth login --token $GITLAB_TOKEN --hostname $CI_SERVER_HOST
 
