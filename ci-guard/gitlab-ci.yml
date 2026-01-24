@@ -21,10 +21,11 @@
 # Note: Set CHECKSUM_API_KEY and GITLAB_TOKEN as CI/CD variables in Project Settings > CI/CD > Variables
 #       Do NOT mark them as "Protected" (MR pipelines run on non-protected refs)
 #
-# Optional: If your variables have different names, override them:
+# Optional variables:
 #     variables:
-#       CHECKSUM_API_KEY_VAR: "MY_CUSTOM_API_KEY_NAME"
-#       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"
+#       EXTRA_CONTEXT: "This is a Python project using pytest."  # Additional context for the reviewer
+#       CHECKSUM_API_KEY_VAR: "MY_CUSTOM_API_KEY_NAME"  # If your API key variable has a different name
+#       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name
 
 .checksum-ci-guard-base:
   image: debian:bookworm-slim  # Debian-based for glibc compatibility with e2e-agent binary
@@ -33,6 +34,7 @@
     GIT_DEPTH: 0
     CHECKSUM_API_KEY_VAR: "CHECKSUM_API_KEY"  # Default variable name, can be overridden
     GITLAB_TOKEN_VAR: "GITLAB_TOKEN"  # Default variable name for GitLab token
+    EXTRA_CONTEXT: ""  # Optional: Additional context for the reviewer
 
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
@@ -77,7 +79,7 @@
 
       curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
 
-      ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
+      PROMPT="You are reviewing a GitLab Merge Request.
 
       Review MR !$MR_NUMBER in $PROJECT_PATH.
 
@@ -92,3 +94,12 @@
       Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
 
       Use 'glab mr note $MR_NUMBER --message <comment>' to post comments to the MR."
+
+      if [ -n "$EXTRA_CONTEXT" ]; then
+        PROMPT="$PROMPT
+
+      Additional Context:
+      $EXTRA_CONTEXT"
+      fi
+
+      ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"

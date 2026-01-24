@@ -149,41 +149,21 @@ checksum-ci-guard:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
-    # ... same as above
-  script:
-    - |
-      # Resolve variables (required when overriding script)
-      CHECKSUM_API_KEY="${!CHECKSUM_API_KEY_VAR:-$CHECKSUM_API_KEY}"
-      GITLAB_TOKEN="${!GITLAB_TOKEN_VAR:-$GITLAB_TOKEN}"
-
-      glab auth login --token "$GITLAB_TOKEN" --hostname "$CI_SERVER_HOST"
-
-      mkdir -p ~/.checksumai
-      echo "CHECKSUM_API_KEY=$CHECKSUM_API_KEY" > ~/.checksumai/.env
-      chmod 600 ~/.checksumai/.env
-
-      curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh" | bash -s -- --pr-review
-
-      ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
-
-      Review MR !$MR_NUMBER in $PROJECT_PATH.
-
-      Additional context: This is a Python project using FastAPI.
-
-      MR Title: $MR_TITLE
-      MR URL: $MR_URL
-      Base SHA: $BASE_SHA
-      Head SHA: $HEAD_SHA
-
-      MR Description:
-      $MR_DESCRIPTION
-
-      Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
-
-      Use 'glab mr note $MR_NUMBER --message <comment>' to post comments to the MR."
+    EXTRA_CONTEXT: |
+      This is a Python FastAPI project using pytest.
+      Use existing test fixtures from tests/conftest.py.
+    MR_NUMBER: $CI_MERGE_REQUEST_IID
+    PROJECT_PATH: $CI_PROJECT_PATH
+    MR_TITLE: $CI_MERGE_REQUEST_TITLE
+    MR_URL: "$CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID"
+    BASE_SHA: $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    HEAD_SHA: $CI_COMMIT_SHA
+    MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
 ```
 
-## Required Variables
+## Variables
+
+### Required
 
 | Variable | Description | Source |
 |----------|-------------|--------|
@@ -196,6 +176,14 @@ checksum-ci-guard:
 | `BASE_SHA` | Base commit SHA | `$CI_MERGE_REQUEST_DIFF_BASE_SHA` |
 | `HEAD_SHA` | Head commit SHA | `$CI_COMMIT_SHA` |
 | `MR_DESCRIPTION` | MR description | `$CI_MERGE_REQUEST_DESCRIPTION` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `EXTRA_CONTEXT` | Additional context for the reviewer (e.g., project type, test frameworks) | `""` |
+| `CHECKSUM_API_KEY_VAR` | Custom variable name for API key | `"CHECKSUM_API_KEY"` |
+| `GITLAB_TOKEN_VAR` | Custom variable name for GitLab token | `"GITLAB_TOKEN"` |
 
 ## Requirements
 
