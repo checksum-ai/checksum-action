@@ -23,7 +23,7 @@ jobs:
       - name: Run Checksum test suites
         uses: checksum-ai/checksum-action/api-testing@main
         with:
-          checksum-api-key: ${{ secrets.CHECKSUM_API_KEY }}
+          checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
           suite-ids: ""
 ```
 
@@ -31,7 +31,7 @@ jobs:
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `checksum-api-key` | Checksum AI project API key | Yes | - |
+| `checksum_api_key` | Checksum AI project API key | Yes | - |
 | `suite-ids` | Comma-separated list of test suite UUIDs. Empty means all suites with code. | No | `""` |
 | `base-url` | Checksum AI base URL | No | `https://aiagents.checksum.ai` |
 | `poll-interval-seconds` | Polling interval in seconds | No | `10` |
@@ -64,7 +64,7 @@ jobs:
 - name: Run specific test suites
   uses: checksum-ai/checksum-action/api-testing@main
   with:
-    checksum-api-key: ${{ secrets.CHECKSUM_API_KEY }}
+    checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
     suite-ids: "uuid-1,uuid-2,uuid-3"
 ```
 
@@ -75,7 +75,7 @@ jobs:
   id: checksum
   uses: checksum-ai/checksum-action/api-testing@main
   with:
-    checksum-api-key: ${{ secrets.CHECKSUM_API_KEY }}
+    checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
 
 - name: Check results
   run: |
@@ -92,7 +92,7 @@ jobs:
   id: checksum
   uses: checksum-ai/checksum-action/api-testing@main
   with:
-    checksum-api-key: ${{ secrets.CHECKSUM_API_KEY }}
+    checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
 
 - name: Fail if tests failed
   if: ${{ steps.checksum.outputs.failed-count != '0' }}

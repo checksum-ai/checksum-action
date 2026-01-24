@@ -6,7 +6,7 @@ async function sleep(ms) {
 
 async function run() {
   try {
-    const apiKey = core.getInput("checksum-api-key", { required: true });
+    const apiKey = core.getInput("checksum_api_key", { required: true });
     const suiteIdsInput = core.getInput("suite-ids") || "";
     const baseUrl = core.getInput("base-url") || "https://aiagents.checksum.ai";
     const pollIntervalSeconds = Number(core.getInput("poll-interval-seconds") || "10");

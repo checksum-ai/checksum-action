@@ -11,7 +11,7 @@ Run Checksum AI test suites in your CI/CD pipeline.
 ```yaml
 - uses: checksum-ai/checksum-action/api-testing@main
   with:
-    checksum-api-key: ${{ secrets.CHECKSUM_API_KEY }}
+    checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
 ```
 
 ### [CI Guard](./ci-guard)

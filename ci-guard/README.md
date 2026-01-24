@@ -126,15 +126,11 @@ jobs:
 
 ### Custom Runtime Environment
 
-The agent needs your project's test dependencies installed (e.g., Node.js, Python, etc.) to run tests. Add setup steps before running CI Guard:
+The agent needs your project's test dependencies installed (e.g., Node.js, Python, etc.) to run tests. Add setup steps before running CI Guard.
+
+This example shows the runtime setup portion. Include these steps in the full workflow shown above (after "Checkout" and before "Run Checksum CI Guard"):
 
 ```yaml
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
-
   - name: Setup Node.js
     uses: actions/setup-node@v4
     with:
@@ -142,12 +138,6 @@ steps:
 
   - name: Install dependencies
     run: npm ci
-
-  - name: Run Checksum CI Guard
-    uses: checksum-ai/checksum-action/ci-guard@main
-    with:
-      checksum_api_key: ${{ secrets.CHECKSUM_API_KEY }}
-      # ... other inputs
 ```
 
 ## Requirements

@@ -7,7 +7,7 @@ branding:
   color: "blue"
 
 inputs:
-  checksum-api-key:
+  checksum_api_key:
     description: "Checksum AI project API key"
     required: true
   suite-ids:
