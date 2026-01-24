@@ -57,6 +57,21 @@ jobs:
           fetch-depth: 0
           ref: ${{ steps.pr.outputs.head_sha }}
 
+      # ⚠️ IMPORTANT: Install your project's runtime and dependencies
+      # The agent needs these to run tests. Uncomment the relevant lines:
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20'
+      # - name: Setup Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.12'
+
+      # - name: Install dependencies
+      #   run: npm ci                         # Node.js
+      #   run: pip install -r requirements.txt  # Python
+
       - name: Run Checksum CI Guard
         uses: checksum-ai/checksum-action/ci-guard@main
         with:
