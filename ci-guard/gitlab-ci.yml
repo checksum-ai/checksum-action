@@ -41,6 +41,11 @@
 
       curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
 
+      # Ensure API key is available to the binary via .env file
+      mkdir -p ~/.checksumai
+      echo "CHECKSUM_API_KEY=$CHECKSUM_API_KEY" > ~/.checksumai/.env
+      chmod 600 ~/.checksumai/.env
+
       ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
 
       Review MR !$MR_NUMBER in $PROJECT_PATH.
