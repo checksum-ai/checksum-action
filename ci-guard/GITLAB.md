@@ -1,6 +1,6 @@
 # Checksum CI Guard for GitLab
 
-AI-powered code review for GitLab Merge Requests.
+AI-powered code review for GitLab Merge Requests. Automatically analyzes code changes, generates tests, runs them, and posts results as MR comments.
 
 ## Quick Setup
 
@@ -13,6 +13,10 @@ Go to **Settings → CI/CD → Variables** and add:
 | `CHECKSUM_API_KEY` | Your API key from [checksum.ai](https://checksum.ai) | Mask variable |
 | `GITLAB_TOKEN` | A Project Access Token (see below) | Mask variable |
 
+> ⚠️ **IMPORTANT: Do NOT mark variables as "Protected"**
+>
+> MR pipelines run on non-protected refs (`refs/merge-requests/X/head`). Protected variables are only available on protected branches, so **they won't work for MR pipelines**.
+
 #### Creating a Project Access Token (step-by-step)
 
 1. Go to your project in GitLab
@@ -21,11 +25,11 @@ Go to **Settings → CI/CD → Variables** and add:
 4. Fill in the form:
    - **Token name**: `checksum-ci-guard` (or any name you prefer)
    - **Expiration date**: Set a date (recommended: 1 year). If left blank, GitLab auto-sets an expiry (often 30 days). Max lifetime is 365 days by default.
-   - **Select a role**: Choose **Reporter**
+   - **Select a role**: Choose **Reporter** (minimum required for posting comments)
    - **Select scopes**: Check only **`api`**
 5. Click **Create project access token**
 6. **Copy the token immediately** - you won't see it again!
-7. Add it as a CI/CD variable Key `GITLAB_TOKEN`
+7. Add it as a CI/CD variable with key `GITLAB_TOKEN`
 
 > **Why Project Access Token?** Unlike Personal Access Tokens, Project Access Tokens:
 > - Are scoped to this project only (more secure)
@@ -45,8 +49,6 @@ checksum-ci-guard:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   variables:
-    CHECKSUM_API_KEY: $CHECKSUM_API_KEY
-    GITLAB_TOKEN: $GITLAB_TOKEN
     MR_NUMBER: $CI_MERGE_REQUEST_IID
     PROJECT_PATH: $CI_PROJECT_PATH
     MR_TITLE: $CI_MERGE_REQUEST_TITLE
@@ -55,6 +57,8 @@ checksum-ci-guard:
     HEAD_SHA: $CI_COMMIT_SHA
     MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
 ```
+
+> **Note:** `CHECKSUM_API_KEY` and `GITLAB_TOKEN` are automatically picked up from your CI/CD variables. No need to map them in the `variables:` section.
 
 ### 3. Open a Merge Request
 
@@ -68,6 +72,51 @@ This uses GitLab's **hidden job + extends** pattern:
 - You control when and how the review runs
 
 ## Customization
+
+### Custom Variable Names
+
+If your CI/CD variables have different names:
+
+```yaml
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  variables:
+    CHECKSUM_API_KEY_VAR: "MY_API_KEY"
+    GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN"
+    # ... other variables
+```
+
+### Custom Runtime Environment
+
+The default image is `debian:bookworm-slim`. **The agent needs your project's test dependencies installed** (e.g., Node.js, Python, etc.) to run tests.
+
+**Option 1: Override the image**
+
+```yaml
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  image: node:20-bookworm  # Use Node.js 20 with Debian base
+  # ... rest of config
+```
+
+**Option 2: Install dependencies in before_script**
+
+```yaml
+checksum-ci-guard:
+  extends: .checksum-ci-guard-base
+  before_script:
+    # Base dependencies (required)
+    - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
+    # Install glab CLI (required for posting comments)
+    - |
+      GLAB_VERSION=$(curl -s "https://gitlab.com/api/v4/projects/34675721/releases/permalink/latest" | jq -r '.tag_name')
+      curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/${GLAB_VERSION}/downloads/glab_${GLAB_VERSION#v}_linux_amd64.deb" -o /tmp/glab.deb
+      dpkg -i /tmp/glab.deb && rm /tmp/glab.deb
+    # Add your project dependencies
+    - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    - apt-get install -y nodejs
+  # ... rest of config
+```
 
 ### Run only on specific branches
 
@@ -103,7 +152,18 @@ checksum-ci-guard:
     # ... same as above
   script:
     - |
-      # Override script to add custom context
+      # Resolve variables (required when overriding script)
+      CHECKSUM_API_KEY="${!CHECKSUM_API_KEY_VAR:-$CHECKSUM_API_KEY}"
+      GITLAB_TOKEN="${!GITLAB_TOKEN_VAR:-$GITLAB_TOKEN}"
+
+      glab auth login --token "$GITLAB_TOKEN" --hostname "$CI_SERVER_HOST"
+
+      mkdir -p ~/.checksumai
+      echo "CHECKSUM_API_KEY=$CHECKSUM_API_KEY" > ~/.checksumai/.env
+      chmod 600 ~/.checksumai/.env
+
+      curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh" | bash -s -- --pr-review
+
       ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
 
       Review MR !$MR_NUMBER in $PROJECT_PATH.
@@ -120,15 +180,15 @@ checksum-ci-guard:
 
       Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
 
-      To post comments, use the glab CLI: glab mr note $MR_NUMBER --message \"<comment>\""
+      Use 'glab mr note $MR_NUMBER --message <comment>' to post comments to the MR."
 ```
 
 ## Required Variables
 
 | Variable | Description | Source |
 |----------|-------------|--------|
-| `CHECKSUM_API_KEY` | Your Checksum API key | CI/CD Variable |
-| `GITLAB_TOKEN` | Project Access Token with `api` scope (Reporter role) | CI/CD Variable |
+| `CHECKSUM_API_KEY` | Your Checksum API key | CI/CD Variable (auto-detected) |
+| `GITLAB_TOKEN` | Project Access Token with `api` scope (Reporter role) | CI/CD Variable (auto-detected) |
 | `MR_NUMBER` | The MR number | `$CI_MERGE_REQUEST_IID` |
 | `PROJECT_PATH` | Project path (e.g., `group/project`) | `$CI_PROJECT_PATH` |
 | `MR_TITLE` | MR title | `$CI_MERGE_REQUEST_TITLE` |
@@ -137,18 +197,34 @@ checksum-ci-guard:
 | `HEAD_SHA` | Head commit SHA | `$CI_COMMIT_SHA` |
 | `MR_DESCRIPTION` | MR description | `$CI_MERGE_REQUEST_DESCRIPTION` |
 
+## Requirements
+
+- GitLab CI runner with Docker support
+- CI/CD variables: `CHECKSUM_API_KEY`, `GITLAB_TOKEN` (**not marked as Protected**)
+- Full git history: `GIT_DEPTH: 0` (set by default in base template)
+- **Runtime environment**: Override the image or extend `before_script` to install your project's test dependencies (Node.js, Python, etc.)
+
 ## Self-Hosted GitLab
 
 This works with self-hosted GitLab instances. The template uses `$CI_SERVER_HOST` to automatically configure the glab CLI for your instance.
 
 ## Troubleshooting
 
-### "Error: CHECKSUM_API_KEY is required"
+### "Error: CHECKSUM_API_KEY is not set or empty"
 
-Make sure you've added `CHECKSUM_API_KEY` as a CI/CD variable and included it in your job's `variables:` section.
+1. Make sure `CHECKSUM_API_KEY` is added as a CI/CD variable
+2. **Verify the variable is NOT marked as "Protected"** - this is the most common issue!
+3. Check that the variable name matches (or use `CHECKSUM_API_KEY_VAR` to specify a custom name)
+
+### "Error: GITLAB_TOKEN is not set or empty"
+
+1. Make sure `GITLAB_TOKEN` is added as a CI/CD variable
+2. **Verify the variable is NOT marked as "Protected"**
+3. Check that the token hasn't expired
 
 ### Comments not appearing
 
-1. Verify `GITLAB_TOKEN` is set and has `api` scope
+1. Verify `GITLAB_TOKEN` has `api` scope
 2. Check that the Project Access Token has at least **Reporter** role
 3. Review the job logs for glab authentication errors
+4. Make sure the token hasn't expired
