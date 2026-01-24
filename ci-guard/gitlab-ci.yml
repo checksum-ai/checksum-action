@@ -10,7 +10,6 @@
 #     rules:
 #       - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 #     variables:
-#       CHECKSUM_API_KEY: $CHECKSUM_API_KEY
 #       MR_NUMBER: $CI_MERGE_REQUEST_IID
 #       PROJECT_PATH: $CI_PROJECT_PATH
 #       MR_TITLE: $CI_MERGE_REQUEST_TITLE
@@ -18,20 +17,32 @@
 #       BASE_SHA: $CI_MERGE_REQUEST_DIFF_BASE_SHA
 #       HEAD_SHA: $CI_COMMIT_SHA
 #       MR_DESCRIPTION: $CI_MERGE_REQUEST_DESCRIPTION
+#
+# Note: Set CHECKSUM_API_KEY as a CI/CD variable in Project Settings > CI/CD > Variables
+#       Do NOT mark it as "Protected" (MR pipelines run on non-protected refs)
+#
+# Optional: If your API key variable has a different name, override it:
+#     variables:
+#       CHECKSUM_API_KEY_VAR: "MY_CUSTOM_API_KEY_NAME"
 
 .checksum-ci-guard-base:
   image: debian:bookworm-slim  # Debian-based for glibc compatibility with e2e-agent binary
 
   variables:
     GIT_DEPTH: 0
+    CHECKSUM_API_KEY_VAR: "CHECKSUM_API_KEY"  # Default variable name, can be overridden
 
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
 
   script:
     - |
+      # Resolve API key from variable name (supports custom variable names)
+      CHECKSUM_API_KEY="${!CHECKSUM_API_KEY_VAR}"
+
       if [ -z "$CHECKSUM_API_KEY" ]; then
-        echo "Error: CHECKSUM_API_KEY is required"
+        echo "Error: $CHECKSUM_API_KEY_VAR is not set or empty"
+        echo "Make sure the CI/CD variable is configured and NOT marked as 'Protected'"
         exit 1
       fi
       if [ -z "$MR_NUMBER" ]; then
@@ -39,23 +50,12 @@
         exit 1
       fi
 
-      # Debug: Log API key (masked) and create .env BEFORE install
-      echo "DEBUG: CHECKSUM_API_KEY length: ${#CHECKSUM_API_KEY}"
-      echo "DEBUG: CHECKSUM_API_KEY first 4 chars: ${CHECKSUM_API_KEY:0:4}..."
-
-      # Create .env file BEFORE install (in case install.sh validates)
+      # Create .env file for the agent binary
       mkdir -p ~/.checksumai
       echo "CHECKSUM_API_KEY=$CHECKSUM_API_KEY" > ~/.checksumai/.env
       chmod 600 ~/.checksumai/.env
-      echo "DEBUG: .env file created at ~/.checksumai/.env"
-      echo "DEBUG: .env contents (masked): $(head -c 20 ~/.checksumai/.env)..."
 
       curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
-
-      # Debug: Verify .env file still exists after install
-      echo "DEBUG: .env exists after install: $(test -f ~/.checksumai/.env && echo 'yes' || echo 'no')"
-      echo "DEBUG: .env contents after install (masked): $(head -c 20 ~/.checksumai/.env)..."
-      ls -la ~/.checksumai/
 
       ~/.checksumai/callagents.sh pull-request-tester "You are reviewing a GitLab Merge Request.
 
