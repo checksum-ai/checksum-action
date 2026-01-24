@@ -160,7 +160,3 @@ steps:
 ## GitLab CI
 
 For GitLab CI/CD support, see [GITLAB.md](./GITLAB.md).
-
-## Backwards Compatibility
-
-The legacy path `checksum-ai/checksum-action/pr-testing@main` still works and redirects to this action.
