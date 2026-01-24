@@ -83,23 +83,6 @@ runs:
         PR_BODY: ${{ inputs.pr_body }}
         EXTRA_CONTEXT: ${{ inputs.extra_context }}
       run: |
-        # Capture change summary: file list and commits
-        capture_change_summary() {
-          local BASE_SHA="$1"
-          local HEAD_SHA="$2"
-
-          # Show commits in this PR
-          echo "Commits:"
-          git log --oneline "$BASE_SHA".."$HEAD_SHA" | head -50
-          echo ""
-
-          # Show changed files with stats
-          echo "Changed files:"
-          git diff --stat "$BASE_SHA".."$HEAD_SHA" | head -100
-        }
-
-        CHANGE_SUMMARY=$(capture_change_summary "${{ inputs.base_sha }}" "${{ inputs.head_sha }}")
-
         PROMPT="You are reviewing a GitHub Pull Request.
 
         Review PR #${{ inputs.pr_number }} in ${{ github.repository }}.
@@ -112,10 +95,7 @@ runs:
         PR Description:
         $PR_BODY
 
-        ## Changes
-
-        $CHANGE_SUMMARY
-
+        Use 'git diff ${{ inputs.base_sha }}..${{ inputs.head_sha }}' to see the changes.
         Use 'gh pr comment ${{ inputs.pr_number }} --body-file <file>' to post comments."
 
         if [ -n "$EXTRA_CONTEXT" ]; then

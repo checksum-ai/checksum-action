@@ -93,23 +93,6 @@
 
       curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
 
-      # Capture change summary: file list and commits
-      capture_change_summary() {
-        local BASE_SHA="$1"
-        local HEAD_SHA="$2"
-
-        # Show commits in this PR
-        echo "Commits:"
-        git log --oneline "$BASE_SHA".."$HEAD_SHA" | head -50
-        echo ""
-
-        # Show changed files with stats
-        echo "Changed files:"
-        git diff --stat "$BASE_SHA".."$HEAD_SHA" | head -100
-      }
-
-      CHANGE_SUMMARY=$(capture_change_summary "$BASE_SHA" "$HEAD_SHA")
-
       PROMPT="You are reviewing a GitLab Merge Request.
 
       Review MR !$MR_NUMBER in $PROJECT_PATH.
@@ -122,9 +105,7 @@
       MR Description:
       $MR_DESCRIPTION
 
-      ## Changes
-
-      $CHANGE_SUMMARY
+      Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
 
       Use 'glab mr note $MR_NUMBER --message <comment>' to post comments to the MR."
 
