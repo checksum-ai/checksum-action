@@ -28,7 +28,17 @@
 #       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name
 
 .checksum-ci-guard-base:
-  image: debian:bookworm-slim  # Debian-based for glibc compatibility with e2e-agent binary
+  # ⚠️ REPLACE THIS IMAGE with one that has your project's runtime pre-installed!
+  # The agent needs your test dependencies (Node.js, Python, etc.) to run tests.
+  #
+  # Examples:
+  #   image: node:20-bookworm       # Node.js projects
+  #   image: python:3.12-bookworm   # Python projects
+  #   image: golang:1.22-bookworm   # Go projects
+  #   image: rust:1.75-bookworm     # Rust projects
+  #
+  # ❌ Do NOT use Alpine images (e.g., node:20-alpine) - the agent binary requires glibc
+  image: debian:bookworm-slim  # Default: minimal Debian (no runtimes pre-installed)
 
   variables:
     GIT_DEPTH: 0
