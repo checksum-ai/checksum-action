@@ -50,11 +50,9 @@
     - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
     # Install glab CLI from GitLab releases
     - |
-      GLAB_API_RESPONSE=$(curl -sSL "https://gitlab.com/api/v4/projects/34675721/releases/permalink/latest")
-      GLAB_VERSION=$(echo "$GLAB_API_RESPONSE" | jq -r '.tag_name' 2>/dev/null)
+      GLAB_VERSION=$(curl -sSL "https://gitlab.com/api/v4/projects/34675721/releases/permalink/latest" | jq -r '.tag_name' 2>/dev/null)
       if [ -z "$GLAB_VERSION" ] || [ "$GLAB_VERSION" = "null" ]; then
         echo "Error: Failed to fetch glab version from GitLab API"
-        echo "API response: $GLAB_API_RESPONSE"
         exit 1
       fi
       curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/${GLAB_VERSION}/downloads/glab_${GLAB_VERSION#v}_linux_amd64.deb" -o /tmp/glab.deb

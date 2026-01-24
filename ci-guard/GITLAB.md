@@ -123,7 +123,7 @@ checksum-ci-guard:
     - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
     # Install glab CLI (required for posting comments)
     - |
-      GLAB_VERSION=$(curl -s "https://gitlab.com/api/v4/projects/34675721/releases/permalink/latest" | jq -r '.tag_name')
+      GLAB_VERSION=$(curl -sSL "https://gitlab.com/api/v4/projects/34675721/releases/permalink/latest" | jq -r '.tag_name')
       curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/${GLAB_VERSION}/downloads/glab_${GLAB_VERSION#v}_linux_amd64.deb" -o /tmp/glab.deb
       dpkg -i /tmp/glab.deb && rm /tmp/glab.deb
     # Add your project dependencies
