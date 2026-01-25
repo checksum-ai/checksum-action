@@ -26,6 +26,7 @@
 #       EXTRA_CONTEXT: "This is a Python project using pytest."  # Additional context for the reviewer
 #       CHECKSUM_API_KEY_VAR: "MY_CUSTOM_API_KEY_NAME"  # If your API key variable has a different name
 #       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name
+#       ARTIFACT_RETENTION_DAYS: "30"  # Number of days to retain test artifacts (default: 60)
 
 .checksum-ci-guard-base:
   # ⚠️ REPLACE THIS IMAGE with one that has your project's runtime pre-installed!
@@ -45,6 +46,7 @@
     CHECKSUM_API_KEY_VAR: "CHECKSUM_API_KEY"  # Default variable name, can be overridden
     GITLAB_TOKEN_VAR: "GITLAB_TOKEN"  # Default variable name for GitLab token
     EXTRA_CONTEXT: ""  # Optional: Additional context for the reviewer
+    ARTIFACT_RETENTION_DAYS: "60"  # Number of days to retain test artifacts
 
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
@@ -117,3 +119,41 @@
       fi
 
       ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
+
+      # Check for generated tests and create metadata
+      if find tmp -name "*.py" 2>/dev/null | grep -q .; then
+        echo "Generated tests found, creating metadata..."
+        jq -n \
+          --arg project_path "$PROJECT_PATH" \
+          --arg mr_number "$MR_NUMBER" \
+          --arg mr_title "$MR_TITLE" \
+          --arg mr_url "$MR_URL" \
+          --arg head_sha "$HEAD_SHA" \
+          --arg base_sha "$BASE_SHA" \
+          --arg pipeline_id "$CI_PIPELINE_ID" \
+          --arg job_id "$CI_JOB_ID" \
+          --arg generated_at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+          '{
+            project_path: $project_path,
+            mr_number: $mr_number,
+            mr_title: $mr_title,
+            mr_url: $mr_url,
+            head_sha: $head_sha,
+            base_sha: $base_sha,
+            pipeline_id: $pipeline_id,
+            job_id: $job_id,
+            generated_at: $generated_at
+          }' > tmp/metadata.json
+        echo "HAS_TESTS=true" >> generated_tests.env
+      else
+        echo "No test files found in tmp/"
+        echo "HAS_TESTS=false" >> generated_tests.env
+      fi
+
+  artifacts:
+    paths:
+      - tmp/
+    expire_in: ${ARTIFACT_RETENTION_DAYS} days
+    when: always
+    reports:
+      dotenv: generated_tests.env
