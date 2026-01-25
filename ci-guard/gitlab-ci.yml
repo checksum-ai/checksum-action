@@ -146,6 +146,27 @@
             generated_at: $generated_at
           }' > tmp/metadata.json
         echo "HAS_TESTS=true" >> generated_tests.env
+
+        # Upload tests to Checksum backend
+        tar -czf /tmp/mr-tests.tar.gz -C tmp .
+
+        HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+          "https://aiagents.checksum.ai/agent-services/pr-tests/upload" \
+          -H "x-api-key: $CHECKSUM_API_KEY" \
+          -F "file=@/tmp/mr-tests.tar.gz" \
+          -F "repo_owner=$CI_PROJECT_NAMESPACE" \
+          -F "repo_name=$CI_PROJECT_NAME" \
+          -F "pr_number=$MR_NUMBER" \
+          -F "run_id=$CI_PIPELINE_ID")
+
+        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+        HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+        if [ "$HTTP_CODE" != "201" ]; then
+          echo "Warning: Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
+        else
+          echo "Tests uploaded to Checksum successfully"
+        fi
       else
         echo "No test files found in tmp/"
         echo "HAS_TESTS=false" >> generated_tests.env
