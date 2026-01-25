@@ -25,8 +25,7 @@
 #     variables:
 #       EXTRA_CONTEXT: "This is a Python project using pytest."  # Additional context for the reviewer
 #       CHECKSUM_API_KEY_VAR: "MY_CUSTOM_API_KEY_NAME"  # If your API key variable has a different name
-#       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name
-#       ARTIFACT_RETENTION_DAYS: "30"  # Number of days to retain test artifacts (default: 60)
+#       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name 
 
 .checksum-ci-guard-base:
   # ⚠️ REPLACE THIS IMAGE with one that has your project's runtime pre-installed!
@@ -46,7 +45,6 @@
     CHECKSUM_API_KEY_VAR: "CHECKSUM_API_KEY"  # Default variable name, can be overridden
     GITLAB_TOKEN_VAR: "GITLAB_TOKEN"  # Default variable name for GitLab token
     EXTRA_CONTEXT: ""  # Optional: Additional context for the reviewer
-    ARTIFACT_RETENTION_DAYS: "60"  # Number of days to retain test artifacts
 
   before_script:
     - apt-get update && apt-get install -y --no-install-recommends curl jq bash ripgrep ca-certificates git
@@ -153,7 +151,7 @@
   artifacts:
     paths:
       - tmp/
-    expire_in: ${ARTIFACT_RETENTION_DAYS} days
+    expire_in: 60 days
     when: always
     reports:
       dotenv: generated_tests.env
