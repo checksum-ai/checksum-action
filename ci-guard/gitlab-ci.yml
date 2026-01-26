@@ -101,6 +101,9 @@
       MR URL: $MR_URL
       Base SHA: $BASE_SHA
       Head SHA: $HEAD_SHA
+      Pipeline ID: $CI_PIPELINE_ID
+      Job ID: $CI_JOB_ID
+      Project ID: $CI_PROJECT_ID
 
       MR Description:
       $MR_DESCRIPTION
