@@ -121,51 +121,58 @@
 
       ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
 
-      # Check for generated tests and create metadata
-      if find tmp -name "*.py" 2>/dev/null | grep -q .; then
-        echo "Generated tests found, creating metadata..."
-        jq -n \
-          --arg project_path "$PROJECT_PATH" \
-          --arg mr_number "$MR_NUMBER" \
-          --arg mr_title "$MR_TITLE" \
-          --arg mr_url "$MR_URL" \
-          --arg head_sha "$HEAD_SHA" \
-          --arg base_sha "$BASE_SHA" \
-          --arg pipeline_id "$CI_PIPELINE_ID" \
-          --arg job_id "$CI_JOB_ID" \
-          --arg generated_at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-          '{
-            project_path: $project_path,
-            mr_number: $mr_number,
-            mr_title: $mr_title,
-            mr_url: $mr_url,
-            head_sha: $head_sha,
-            base_sha: $base_sha,
-            pipeline_id: $pipeline_id,
-            job_id: $job_id,
-            generated_at: $generated_at
-          }' > tmp/metadata.json
+      # Check for generated tests and upload to Checksum backend
+      if find tmp -name "*.py" -o -name "*.md" -o -name "*.txt" 2>/dev/null | grep -q .; then
+        echo "Generated tests found, preparing upload..."
         echo "HAS_TESTS=true" >> generated_tests.env
 
-        # Upload tests to Checksum backend
-        tar -czf /tmp/mr-tests.tar.gz -C tmp .
+        # Build test_files JSON array from all files in tmp/
+        TEST_FILES_JSON="[]"
+        for file in tmp/*; do
+          if [ -f "$file" ]; then
+            filename=$(basename "$file")
+            # Read file content and escape for JSON
+            content=$(jq -Rs . < "$file")
+            TEST_FILES_JSON=$(echo "$TEST_FILES_JSON" | jq --arg fn "$filename" --argjson content "$content" '. + [{filename: $fn, content: $content}]')
+          fi
+        done
 
+        # Build request body for new CI Guard API
+        REQUEST_BODY=$(jq -n \
+          --arg repo "$PROJECT_PATH" \
+          --arg pr_number "$MR_NUMBER" \
+          --arg pr_title "$MR_TITLE" \
+          --arg pr_description "${MR_DESCRIPTION:-}" \
+          --arg pr_url "$MR_URL" \
+          --arg base_sha "$BASE_SHA" \
+          --arg head_sha "$HEAD_SHA" \
+          --argjson test_files "$TEST_FILES_JSON" \
+          '{
+            repo: $repo,
+            pr_number: ($pr_number | tonumber),
+            pr_title: $pr_title,
+            pr_description: $pr_description,
+            pr_url: $pr_url,
+            base_sha: $base_sha,
+            head_sha: $head_sha,
+            test_files: $test_files
+          }')
+
+        echo "Uploading to Checksum CI Guard API..."
         HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
-          "https://aiagents.checksum.ai/agent-services/pr-tests/upload" \
+          "https://aiagents.checksum.ai/agent-services/ci-guard/runs" \
           -H "x-api-key: $CHECKSUM_API_KEY" \
-          -F "file=@/tmp/mr-tests.tar.gz" \
-          -F "repo_owner=$CI_PROJECT_NAMESPACE" \
-          -F "repo_name=$CI_PROJECT_NAME" \
-          -F "pr_number=$MR_NUMBER" \
-          -F "run_id=$CI_PIPELINE_ID")
+          -H "Content-Type: application/json" \
+          -d "$REQUEST_BODY")
 
         HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
         HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
 
-        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "202" ]; then
-          echo "Warning: Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
-        else
+        if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
           echo "Tests uploaded to Checksum successfully"
+          echo "Response: $HTTP_BODY"
+        else
+          echo "Warning: Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
         fi
       else
         echo "No test files found in tmp/"
