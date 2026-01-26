@@ -162,7 +162,7 @@
         HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
         HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
 
-        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+        if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "202" ]; then
           echo "Warning: Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
         else
           echo "Tests uploaded to Checksum successfully"
