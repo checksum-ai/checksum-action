@@ -33,6 +33,10 @@ inputs:
     description: 'Additional context to provide to the reviewer (optional)'
     required: false
     default: ''
+  artifact_retention_days:
+    description: 'Number of days to retain the test artifacts'
+    required: false
+    default: '60'
 
 runs:
   using: 'composite'
@@ -91,6 +95,7 @@ runs:
         PR URL: ${{ inputs.pr_url }}
         Base SHA: ${{ inputs.base_sha }}
         Head SHA: ${{ inputs.head_sha }}
+        GitHub Run ID: ${{ github.run_id }}
 
         PR Description:
         $PR_BODY
@@ -106,3 +111,78 @@ runs:
         fi
 
         ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
+
+    - name: Check for generated tests
+      id: check-tests
+      shell: bash
+      run: |
+        if find tmp -name "*.py" -o -name "*.md" -o -name "*.txt" 2>/dev/null | grep -q .; then
+          echo "has_tests=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_tests=false" >> $GITHUB_OUTPUT
+          echo "::warning::No test files found in tmp/"
+        fi
+
+    - name: Upload tests as GitHub Artifact
+      if: steps.check-tests.outputs.has_tests == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: pr-${{ inputs.pr_number }}-${{ github.run_id }}-tests
+        path: tmp/
+        retention-days: ${{ inputs.artifact_retention_days }}
+
+    - name: Upload tests to Checksum
+      if: steps.check-tests.outputs.has_tests == 'true'
+      shell: bash
+      env:
+        CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
+        PR_BODY: ${{ inputs.pr_body }}
+      run: |
+        # Build test_files JSON array from all files in tmp/
+        TEST_FILES_JSON="[]"
+        for file in tmp/*; do
+          if [ -f "$file" ]; then
+            filename=$(basename "$file")
+            # Read file content and escape for JSON
+            content=$(jq -Rs . < "$file")
+            TEST_FILES_JSON=$(echo "$TEST_FILES_JSON" | jq --arg fn "$filename" --argjson content "$content" '. + [{filename: $fn, content: $content}]')
+          fi
+        done
+
+        # Build request body for CI Guard API
+        REQUEST_BODY=$(jq -n \
+          --arg repo "${{ github.repository }}" \
+          --arg pr_number "${{ inputs.pr_number }}" \
+          --arg pr_title "${{ inputs.pr_title }}" \
+          --arg pr_description "${PR_BODY:-}" \
+          --arg pr_url "${{ inputs.pr_url }}" \
+          --arg base_sha "${{ inputs.base_sha }}" \
+          --arg head_sha "${{ inputs.head_sha }}" \
+          --argjson test_files "$TEST_FILES_JSON" \
+          '{
+            repo: $repo,
+            pr_number: ($pr_number | tonumber),
+            pr_title: $pr_title,
+            pr_description: $pr_description,
+            pr_url: $pr_url,
+            base_sha: $base_sha,
+            head_sha: $head_sha,
+            test_files: $test_files
+          }')
+
+        echo "Uploading to Checksum CI Guard API..."
+        HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+          "https://aiagents.checksum.ai/agent-services/ci-guard/runs" \
+          -H "x-api-key: $CHECKSUM_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d "$REQUEST_BODY")
+
+        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+        HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+        if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+          echo "Tests uploaded to Checksum successfully"
+          echo "Response: $HTTP_BODY"
+        else
+          echo "::warning::Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
+        fi

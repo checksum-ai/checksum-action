@@ -25,7 +25,7 @@
 #     variables:
 #       EXTRA_CONTEXT: "This is a Python project using pytest."  # Additional context for the reviewer
 #       CHECKSUM_API_KEY_VAR: "MY_CUSTOM_API_KEY_NAME"  # If your API key variable has a different name
-#       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name
+#       GITLAB_TOKEN_VAR: "MY_GITLAB_TOKEN_NAME"  # If your token variable has a different name 
 
 .checksum-ci-guard-base:
   # ⚠️ REPLACE THIS IMAGE with one that has your project's runtime pre-installed!
@@ -101,6 +101,9 @@
       MR URL: $MR_URL
       Base SHA: $BASE_SHA
       Head SHA: $HEAD_SHA
+      Pipeline ID: $CI_PIPELINE_ID
+      Job ID: $CI_JOB_ID
+      Project ID: $CI_PROJECT_ID
 
       MR Description:
       $MR_DESCRIPTION
@@ -117,3 +120,69 @@
       fi
 
       ~/.checksumai/callagents.sh pull-request-tester "$PROMPT"
+
+      # Check for generated tests and upload to Checksum backend
+      if find tmp -name "*.py" -o -name "*.md" -o -name "*.txt" 2>/dev/null | grep -q .; then
+        echo "Generated tests found, preparing upload..."
+        echo "HAS_TESTS=true" >> generated_tests.env
+
+        # Build test_files JSON array from all files in tmp/
+        TEST_FILES_JSON="[]"
+        for file in tmp/*; do
+          if [ -f "$file" ]; then
+            filename=$(basename "$file")
+            # Read file content and escape for JSON
+            content=$(jq -Rs . < "$file")
+            TEST_FILES_JSON=$(echo "$TEST_FILES_JSON" | jq --arg fn "$filename" --argjson content "$content" '. + [{filename: $fn, content: $content}]')
+          fi
+        done
+
+        # Build request body for new CI Guard API
+        REQUEST_BODY=$(jq -n \
+          --arg repo "$PROJECT_PATH" \
+          --arg pr_number "$MR_NUMBER" \
+          --arg pr_title "$MR_TITLE" \
+          --arg pr_description "${MR_DESCRIPTION:-}" \
+          --arg pr_url "$MR_URL" \
+          --arg base_sha "$BASE_SHA" \
+          --arg head_sha "$HEAD_SHA" \
+          --argjson test_files "$TEST_FILES_JSON" \
+          '{
+            repo: $repo,
+            pr_number: ($pr_number | tonumber),
+            pr_title: $pr_title,
+            pr_description: $pr_description,
+            pr_url: $pr_url,
+            base_sha: $base_sha,
+            head_sha: $head_sha,
+            test_files: $test_files
+          }')
+
+        echo "Uploading to Checksum CI Guard API..."
+        HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST \
+          "https://aiagents.checksum.ai/agent-services/ci-guard/runs" \
+          -H "x-api-key: $CHECKSUM_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d "$REQUEST_BODY")
+
+        HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+        HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+        if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+          echo "Tests uploaded to Checksum successfully"
+          echo "Response: $HTTP_BODY"
+        else
+          echo "Warning: Failed to upload tests to Checksum (HTTP $HTTP_CODE): $HTTP_BODY"
+        fi
+      else
+        echo "No test files found in tmp/"
+        echo "HAS_TESTS=false" >> generated_tests.env
+      fi
+
+  artifacts:
+    paths:
+      - tmp/
+    expire_in: 60 days
+    when: always
+    reports:
+      dotenv: generated_tests.env
