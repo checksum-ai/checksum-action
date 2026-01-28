@@ -108,7 +108,7 @@
       MR Description:
       $MR_DESCRIPTION
 
-      Use 'git diff $BASE_SHA..$HEAD_SHA' to see the changes.
+      Use 'git diff $BASE_SHA...$HEAD_SHA' to see the changes.
 
       Use 'glab mr note $MR_NUMBER --message <comment>' to post comments to the MR."
 

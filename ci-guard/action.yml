@@ -100,7 +100,7 @@ runs:
         PR Description:
         $PR_BODY
 
-        Use 'git diff ${{ inputs.base_sha }}..${{ inputs.head_sha }}' to see the changes.
+        Use 'git diff ${{ inputs.base_sha }}...${{ inputs.head_sha }}' to see the changes.
         Use 'gh pr comment ${{ inputs.pr_number }} --body-file <file>' to post comments."
 
         if [ -n "$EXTRA_CONTEXT" ]; then
