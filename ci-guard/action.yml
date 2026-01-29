@@ -86,6 +86,7 @@ runs:
         CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
         PR_BODY: ${{ inputs.pr_body }}
         EXTRA_CONTEXT: ${{ inputs.extra_context }}
+        TRIGGER_COMMENT: ${{ github.event_name == 'issue_comment' && github.event.comment.body || '' }}
       run: |
         PROMPT="You are reviewing a GitHub Pull Request.
 
@@ -102,6 +103,13 @@ runs:
 
         Use 'git diff ${{ inputs.base_sha }}...${{ inputs.head_sha }}' to see the changes.
         Use 'gh pr comment ${{ inputs.pr_number }} --body-file <file>' to post comments."
+
+        if [ -n "$TRIGGER_COMMENT" ]; then
+          PROMPT="$PROMPT
+
+        User Request (from @checksum-ai mention):
+        $TRIGGER_COMMENT"
+        fi
 
         if [ -n "$EXTRA_CONTEXT" ]; then
           PROMPT="$PROMPT
