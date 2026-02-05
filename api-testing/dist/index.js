@@ -27580,7 +27580,7 @@ async function run() {
 
     core.info(`Creating Checksum test run with ${suiteIds.length} suite ids`);
 
-    const createResp = await fetch(`${baseUrl}/test-runs`, {
+    const createResp = await fetch(`${baseUrl}/api/test-runs`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -27603,7 +27603,7 @@ async function run() {
     const testRunId = createData.id;
     const initialStatus = createData.status;
     const initialUrl =
-      createData.url || `${baseUrl}/test-runs/${encodeURIComponent(testRunId)}`;
+      createData.url || `${baseUrl}/api/test-runs/${encodeURIComponent(testRunId)}`;
 
     if (!testRunId) {
       throw new Error("Response from create_test_run did not include an id");
@@ -27631,7 +27631,7 @@ async function run() {
       core.info(`Polling attempt ${attempt} for test run ${testRunId}...`);
 
       const getResp = await fetch(
-        `${baseUrl}/test-runs/${encodeURIComponent(testRunId)}`,
+        `${baseUrl}/api/test-runs/${encodeURIComponent(testRunId)}`,
         {
           method: "GET",
           headers: {
@@ -27679,7 +27679,7 @@ async function run() {
     const errorCount = finalData.error_count || 0;
 
     const resultUrl =
-      finalData.url || `${baseUrl}/test-runs/${encodeURIComponent(testRunId)}`;
+      finalData.url || `${baseUrl}/api/test-runs/${encodeURIComponent(testRunId)}`;
 
     const statusEmoji =
       status === "completed"
