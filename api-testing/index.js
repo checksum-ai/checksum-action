@@ -112,17 +112,20 @@ async function run() {
         `Test run ${testRunId} is still in_progress after timeout of ${timeoutSeconds}s`
       );
     }
-
+    function countByStatus(data, status) {                                                                                                                                                  
+      return (data.suite_runs || []).reduce((acc, sr) =>                                                                                                                                  
+        acc + (sr.case_runs || []).filter(cr => cr.status === status).length, 0);
+    }
+  
     // Final summary with emojis
+    const passedCount = countByStatus(finalData, 'passed') || 0;
+    const failedCount = countByStatus(finalData, 'failed') || 0;
+    const healedCount = countByStatus(finalData, 'healed') || 0;
+    const bugCount = countByStatus(finalData, 'bug') || 0;
+    const errorCount = countByStatus(finalData, 'error') || 0;
     const status = finalData.status;
-    const passedCount = finalData.passed_count || 0;
-    const failedCount = finalData.failed_count || 0;
-    const healedCount = finalData.healed_count || 0;
-    const bugCount = finalData.bug_count || 0;
-    const errorCount = finalData.error_count || 0;
-
     const resultUrl =
-      finalData.url || `${baseUrl}/api/test-runs/${encodeURIComponent(testRunId)}`;
+      finalData.url || `${baseUrl}/test-runs/${encodeURIComponent(testRunId)}`;
 
     const statusEmoji =
       status === "completed"
