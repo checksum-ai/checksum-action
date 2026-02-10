@@ -84,6 +84,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.auth.outputs.github_token }}
         CHECKSUM_API_KEY: ${{ inputs.checksum_api_key }}
+        PR_NUMBER: ${{ inputs.pr_number }}
         PR_BODY: ${{ inputs.pr_body }}
         EXTRA_CONTEXT: ${{ inputs.extra_context }}
         TRIGGER_COMMENT: ${{ github.event_name == 'issue_comment' && github.event.comment.body || '' }}
