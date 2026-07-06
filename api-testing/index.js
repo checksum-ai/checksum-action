@@ -11,6 +11,7 @@ async function run() {
     const baseUrl = core.getInput("base-url") || "https://aiagents.checksum.ai";
     const pollIntervalSeconds = Number(core.getInput("poll-interval-seconds") || "10");
     const timeoutSeconds = Number(core.getInput("timeout-seconds") || "900");
+    const reason = (core.getInput("reason") || "").trim();
 
     const pollIntervalMs = pollIntervalSeconds * 1000;
     const maxAttempts = Math.ceil(timeoutSeconds / pollIntervalSeconds);
@@ -31,6 +32,7 @@ async function run() {
       },
       body: JSON.stringify({
         suite_ids: suiteIds,
+        ...(reason && { reason }),
       }),
     });
 
@@ -123,6 +125,7 @@ async function run() {
     const healedCount = countByStatus(finalData, 'healed') || 0;
     const bugCount = countByStatus(finalData, 'bug') || 0;
     const errorCount = countByStatus(finalData, 'error') || 0;
+    const skippedCount = countByStatus(finalData, 'skipped') || 0;
     const status = finalData.status;
     const resultUrl =
       finalData.url || `${baseUrl}/test-runs/${encodeURIComponent(testRunId)}`;
@@ -144,6 +147,7 @@ async function run() {
     core.info(`🧩 Healed: ${healedCount}`);
     core.info(`🐞 Bug: ${bugCount}`);
     core.info(`⚠️ Error: ${errorCount}`);
+    core.info(`⏭️ Skipped: ${skippedCount}`);
     core.info(`🔗 Results URL: ${resultUrl}`);
     core.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     core.info("");
@@ -156,6 +160,7 @@ async function run() {
     core.setOutput("healed-count", healedCount.toString());
     core.setOutput("bug-count", bugCount.toString());
     core.setOutput("error-count", errorCount.toString());
+    core.setOutput("skipped-count", skippedCount.toString());
     core.setOutput("result-url", resultUrl);
 
     // Fail the action if there are any failed, bug, or error tests
@@ -171,6 +176,14 @@ async function run() {
         "Checksum test run completed with failing, bug, or error cases."
       );
       return;
+    }
+
+    if (passedCount + failedCount === 0) {
+      // ponytail: warn, don't fail — empty suites currently pass and some
+      // consumers may rely on that. Flip to setFailed if that changes.
+      core.warning(
+        "Test run completed but no cases were executed (all skipped or empty run)."
+      );
     }
 
     core.info("✅ Checksum test run completed successfully with no failures.");

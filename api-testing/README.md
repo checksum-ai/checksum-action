@@ -36,6 +36,7 @@ jobs:
 | `base-url` | Checksum AI base URL | No | `https://aiagents.checksum.ai` |
 | `poll-interval-seconds` | Polling interval in seconds | No | `10` |
 | `timeout-seconds` | Maximum time to wait for the test run to finish | No | `600` |
+| `reason` | Optional run reason persisted by Checksum (e.g. `periodic` for scheduled runs). Empty means untagged. | No | `""` |
 
 ## Outputs
 
@@ -48,6 +49,7 @@ jobs:
 | `healed-count` | Number of healed tests |
 | `bug-count` | Number of bug tests |
 | `error-count` | Number of tests that ended in error |
+| `skipped-count` | Number of skipped tests |
 | `result-url` | URL for viewing the test run in Checksum |
 
 ## Setup

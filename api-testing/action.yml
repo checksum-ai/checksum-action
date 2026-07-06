@@ -26,6 +26,10 @@ inputs:
     description: "Maximum time to wait for the test run to finish"
     required: false
     default: "600"
+  reason:
+    description: "Optional run reason persisted by Checksum (e.g. periodic). Empty means untagged."
+    required: false
+    default: ""
 
 outputs:
   test-run-id:
@@ -42,6 +46,8 @@ outputs:
     description: "Number of bug tests"
   error-count:
     description: "Number of tests that ended in error"
+  skipped-count:
+    description: "Number of skipped tests"
   result-url:
     description: "URL for viewing the test run in Checksum"
 
