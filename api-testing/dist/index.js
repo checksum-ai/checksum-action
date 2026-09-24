@@ -27568,6 +27568,12 @@ async function run() {
     const baseUrl = core.getInput("base-url") || "https://aiagents.checksum.ai";
     const pollIntervalSeconds = Number(core.getInput("poll-interval-seconds") || "10");
     const timeoutSeconds = Number(core.getInput("timeout-seconds") || "900");
+    const reason = core.getInput("reason").trim();
+
+    // Checksum rejects any other value, so fail here before a run is created.
+    if (reason && !["periodic", "cicd"].includes(reason)) {
+      throw new Error(`Invalid reason "${reason}". Use "periodic" or "cicd".`);
+    }
 
     const pollIntervalMs = pollIntervalSeconds * 1000;
     const maxAttempts = Math.ceil(timeoutSeconds / pollIntervalSeconds);
@@ -27588,6 +27594,7 @@ async function run() {
       },
       body: JSON.stringify({
         suite_ids: suiteIds,
+        ...(reason && { reason }),
       }),
     });
 

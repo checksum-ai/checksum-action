@@ -36,6 +36,7 @@ jobs:
 | `base-url` | Checksum AI base URL | No | `https://aiagents.checksum.ai` |
 | `poll-interval-seconds` | Polling interval in seconds | No | `10` |
 | `timeout-seconds` | Maximum time to wait for the test run to finish | No | `600` |
+| `reason` | Why the run was started: `periodic` for scheduled runs, `cicd` for pipeline runs. Empty sends no reason. | No | `""` |
 
 ## Outputs
 

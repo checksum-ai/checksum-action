@@ -22,6 +22,10 @@ inputs:
     description: "Polling interval in seconds"
     required: false
     default: "10"
+  reason:
+    description: "Why this run was started: periodic for scheduled runs, cicd for pipeline runs. Empty sends no reason."
+    required: false
+    default: ""
   timeout-seconds:
     description: "Maximum time to wait for the test run to finish"
     required: false
